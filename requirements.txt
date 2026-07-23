@@ -1,7 +1,7 @@
 # ============================================================
 # CCS Brand Assistant — Dependencias Python
 # ============================================================
-# Instalación automática via install.json de Pinokio.
+# Instalación automática via install.js de Pinokio (Gepeto).
 # Para instalar manualmente:
 #   python -m venv venv
 #   venv/bin/pip install -r requirements.txt          (macOS/Linux)
@@ -24,13 +24,13 @@ pydantic>=2.5.0
 Pillow>=10.0.0
 
 # --- Scraper con JS (SPAs, React, Taskade, etc.) ---
-# El browser Chromium se instala por separado en install.json:
+# El browser Chromium se instala por separado en install.js:
 #   playwright install chromium
 playwright>=1.40.0
 
 # --- Motor de imágenes con IA (opcional, se instala por separado) ---
 # torch NO se incluye aquí porque el índice depende del hardware.
-# Se instala en install.json con el índice correcto para CPU.
+# Se instala en install.js con el índice correcto para CPU/GPU (torch.js).
 # Si tienes GPU NVIDIA, instala manualmente:
 #   pip install torch --index-url https://download.pytorch.org/whl/cu121
 diffusers>=0.30.0

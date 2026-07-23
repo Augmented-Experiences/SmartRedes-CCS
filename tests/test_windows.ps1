@@ -67,14 +67,16 @@ Write-Header
 Write-Host "--- Estructura de archivos ---" -ForegroundColor Yellow
 
 $ROOT = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-if (-not (Test-Path "$ROOT\start.json")) {
+if (-not (Test-Path "$ROOT\start.js")) {
     $ROOT = Split-Path -Parent $PSScriptRoot
 }
 
-Test-Assert "start.json existe" { Test-Path "$ROOT\start.json" }
+Test-Assert "start.js existe" { Test-Path "$ROOT\start.js" }
 Test-Assert "pinokio.js existe" { Test-Path "$ROOT\pinokio.js" }
-Test-Assert "install.json existe" { Test-Path "$ROOT\install.json" }
-Test-Assert "stop.json existe" { Test-Path "$ROOT\stop.json" }
+Test-Assert "install.js existe" { Test-Path "$ROOT\install.js" }
+Test-Assert "stop.js existe" { Test-Path "$ROOT\stop.js" }
+Test-Assert "torch.js existe" { Test-Path "$ROOT\torch.js" }
+Test-Assert "pinokio.json existe" { Test-Path "$ROOT\pinokio.json" }
 Test-Assert "server\app.py existe" { Test-Path "$ROOT\server\app.py" }
 Test-Assert "app\index.html existe" { Test-Path "$ROOT\app\index.html" }
 Test-Assert "requirements.txt existe" { Test-Path "$ROOT\requirements.txt" }
@@ -86,34 +88,28 @@ Test-Assert "requirements.txt existe" { Test-Path "$ROOT\requirements.txt" }
 Write-Host ""
 Write-Host "--- Configuración Pinokio ---" -ForegroundColor Yellow
 
-Test-Assert "start.json es JSON válido" {
-    $null = Get-Content "$ROOT\start.json" -Raw | ConvertFrom-Json
-    $true
+Test-Assert "start.js es script Gepeto valido" {
+    $content = Get-Content "$ROOT\start.js" -Raw
+    ($content -match "module\.exports") -and ($content -match "daemon")
 }
 
-Test-Assert "start.json NO usa input.event en browser.open" {
-    $content = Get-Content "$ROOT\start.json" -Raw
-    # input.event[0] es correcto dentro de self.set, pero NO en browser.open
-    -not ($content -match 'browser\.open.*input\.event')
+Test-Assert "start.js usa local.url en browser.open" {
+    $content = Get-Content "$ROOT\start.js" -Raw
+    $content -match "local\.url"
 }
 
-Test-Assert "start.json pasa PORT como env var" {
-    $content = Get-Content "$ROOT\start.json" -Raw
-    $content -match '"PORT"'
+Test-Assert "start.js pasa PORT como env var" {
+    $content = Get-Content "$ROOT\start.js" -Raw
+    $content -match "PORT"
 }
 
-Test-Assert "start.json usa self.session.url en browser.open" {
-    $content = Get-Content "$ROOT\start.json" -Raw
-    $content -match "self\.session\.url"
+Test-Assert "install.js es script Gepeto valido" {
+    $content = Get-Content "$ROOT\install.js" -Raw
+    $content -match "module\.exports"
 }
 
-Test-Assert "install.json es JSON válido" {
-    $null = Get-Content "$ROOT\install.json" -Raw | ConvertFrom-Json
-    $true
-}
-
-Test-Assert "install.json incluye llama3.1:8b" {
-    $content = Get-Content "$ROOT\install.json" -Raw
+Test-Assert "install.js incluye llama3.1:8b" {
+    $content = Get-Content "$ROOT\install.js" -Raw
     $content -match "llama3\.1:8b"
 }
 

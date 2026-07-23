@@ -4,7 +4,7 @@
 
 CCS Brand Assistant is a single-product repo: a local FastAPI backend (`server/app.py`)
 that also serves a vanilla-JS SPA frontend (`app/index.html`). It is packaged as a
-Pinokio plugin (`pinokio.js`, `install.json`, `start.json`), but Pinokio is NOT needed
+Pinokio plugin (`pinokio.js`, `install.js`, `start.js`), but Pinokio is NOT needed
 to develop or run it here. There is no database — all state is JSON under `data/`
 (gitignored). There is no Node/`package.json`.
 
@@ -17,8 +17,14 @@ to develop or run it here. There is no database — all state is JSON under `dat
   installed by `scripts/setup_venv.sh` and are failure-tolerant — the app degrades
   gracefully without them.
 
-### Running the app (dev)
-- Start: `PORT=7860 venv/bin/python server/app.py` (binds `127.0.0.1:7860` only).
+### Pinokio / Gepeto launcher
+- Pinokio scripts are **Gepeto v5.0** format: `install.js`, `start.js`, `stop.js`, `reset.js`, `update.js`, `torch.js`, `link.js`, `pinokio.js`, `pinokio.json`.
+- Legacy `.json` scripts (`install.json`, etc.) were replaced by `.js` equivalents.
+- Default port is `7860`; `start.js` sets `local.url` to `{server}/ui/index.html` for the "Abrir UI" menu button.
+- `torch.js` is adapted from Gepeto (uses `pip`, not `uv pip`) for broader compatibility.
+- Manual dev setup without Pinokio still uses `scripts/setup_venv.sh`.
+
+### Running the app (dev) `PORT=7860 venv/bin/python server/app.py` (binds `127.0.0.1:7860` only).
 - UI: `http://127.0.0.1:7860/ui/index.html` (root `/` 307-redirects there).
 - Health check: `curl http://127.0.0.1:7860/api/health`.
 - Do NOT run A1111 on the default port — its default (`7860`) collides with this app.
@@ -26,7 +32,7 @@ to develop or run it here. There is no database — all state is JSON under `dat
 ### Data directory (gotcha)
 - `data/` is gitignored, so a truly fresh checkout has no data dirs. The app creates
   most subdirs on demand, but agent/prompt defaults come from `defaults/`. If `data/`
-  is missing, re-create it with the same steps `install.json` uses:
+  is missing, re-create it with the same steps `install.js` uses:
   ```
   venv/bin/python -c "import os;[os.makedirs(d,exist_ok=True) for d in ['data/agents','data/prompts/system','data/prompts/skills','data/sessions','data/exports','data/brands','data/campaigns','data/audit','data/images']]"
   venv/bin/python -c "import os,shutil;dst='data/agents/agents.json';shutil.copy2('defaults/agents.json',dst) if not os.path.exists(dst) else None"

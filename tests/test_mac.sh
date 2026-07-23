@@ -52,10 +52,12 @@ assert() {
 
 echo -e "${YELLOW}--- Estructura de archivos ---${NC}"
 
-assert "start.json existe" "$([ -f "$ROOT/start.json" ] && echo true || echo false)"
+assert "start.js existe" "$([ -f "$ROOT/start.js" ] && echo true || echo false)"
 assert "pinokio.js existe" "$([ -f "$ROOT/pinokio.js" ] && echo true || echo false)"
-assert "install.json existe" "$([ -f "$ROOT/install.json" ] && echo true || echo false)"
-assert "stop.json existe" "$([ -f "$ROOT/stop.json" ] && echo true || echo false)"
+assert "install.js existe" "$([ -f "$ROOT/install.js" ] && echo true || echo false)"
+assert "stop.js existe" "$([ -f "$ROOT/stop.js" ] && echo true || echo false)"
+assert "torch.js existe" "$([ -f "$ROOT/torch.js" ] && echo true || echo false)"
+assert "pinokio.json existe" "$([ -f "$ROOT/pinokio.json" ] && echo true || echo false)"
 assert "server/app.py existe" "$([ -f "$ROOT/server/app.py" ] && echo true || echo false)"
 assert "app/index.html existe" "$([ -f "$ROOT/app/index.html" ] && echo true || echo false)"
 assert "requirements.txt existe" "$([ -f "$ROOT/requirements.txt" ] && echo true || echo false)"
@@ -67,45 +69,39 @@ assert "requirements.txt existe" "$([ -f "$ROOT/requirements.txt" ] && echo true
 echo ""
 echo -e "${YELLOW}--- Configuración Pinokio ---${NC}"
 
-# start.json válido
-if python3 -c "import json; json.loads(open('$ROOT/start.json').read())" 2>/dev/null; then
-    assert "start.json es JSON válido" "true"
+# start.js válido (Gepeto module.exports)
+if grep -q 'module.exports' "$ROOT/start.js" 2>/dev/null && grep -q 'daemon' "$ROOT/start.js" 2>/dev/null; then
+    assert "start.js es script Gepeto válido" "true"
 else
-    assert "start.json es JSON válido" "false"
+    assert "start.js es script Gepeto válido" "false"
 fi
 
-# start.json NO usa input.event en browser.open
-if ! grep -q 'browser.open.*input.event' "$ROOT/start.json" 2>/dev/null; then
-    assert "start.json NO usa input.event en browser.open" "true"
+# start.js usa local.url en browser.open
+if grep -q 'local.url' "$ROOT/start.js" 2>/dev/null; then
+    assert "start.js usa local.url en browser.open" "true"
 else
-    assert "start.json NO usa input.event en browser.open" "false"
+    assert "start.js usa local.url en browser.open" "false"
 fi
 
-# start.json pasa PORT como env var
-if grep -q '"PORT"' "$ROOT/start.json" 2>/dev/null; then
-    assert "start.json pasa PORT como env var" "true"
+# start.js pasa PORT como env var
+if grep -q 'PORT' "$ROOT/start.js" 2>/dev/null; then
+    assert "start.js pasa PORT como env var" "true"
 else
-    assert "start.json pasa PORT como env var" "false"
+    assert "start.js pasa PORT como env var" "false"
 fi
 
-# start.json usa self.session.url para browser.open
-if grep -q 'self.session.url' "$ROOT/start.json" 2>/dev/null; then
-    assert "start.json usa self.session.url en browser.open" "true"
+# install.js válido
+if grep -q 'module.exports' "$ROOT/install.js" 2>/dev/null; then
+    assert "install.js es script Gepeto válido" "true"
 else
-    assert "start.json usa self.session.url en browser.open" "false"
-fi
-# install.json válido
-if python3 -c "import json; json.loads(open('$ROOT/install.json').read())" 2>/dev/null; then
-    assert "install.json es JSON válido" "true"
-else
-    assert "install.json es JSON válido" "false"
+    assert "install.js es script Gepeto válido" "false"
 fi
 
-# install.json incluye llama3.1:8b
-if grep -q "llama3.1:8b" "$ROOT/install.json" 2>/dev/null; then
-    assert "install.json incluye llama3.1:8b" "true"
+# install.js incluye llama3.1:8b
+if grep -q "llama3.1:8b" "$ROOT/install.js" 2>/dev/null; then
+    assert "install.js incluye llama3.1:8b" "true"
 else
-    assert "install.json incluye llama3.1:8b" "false"
+    assert "install.js incluye llama3.1:8b" "false"
 fi
 
 # pinokio.js título
@@ -122,11 +118,11 @@ else
     assert "pinokio.js NO contiene input.event en href" "false"
 fi
 
-# pinokio.js usa session.json para URL
-if grep -q 'session' "$ROOT/pinokio.js" 2>/dev/null; then
-    assert "pinokio.js usa session.json para URL" "true"
+# pinokio.js usa info.local para URL (Gepeto v5.0)
+if grep -q 'info.local' "$ROOT/pinokio.js" 2>/dev/null; then
+    assert "pinokio.js usa info.local para URL" "true"
 else
-    assert "pinokio.js usa session.json para URL" "false"
+    assert "pinokio.js usa info.local para URL" "false"
 fi
 
 # ============================================================

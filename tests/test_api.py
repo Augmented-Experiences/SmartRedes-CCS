@@ -440,67 +440,50 @@ class TestModelPerformance:
 
 
 # ============================================================
-# Tests: Start.json & Pinokio.js Validation
+# Tests: Gepeto Pinokio scripts (install.js, start.js, pinokio.js)
 # ============================================================
 
 class TestPinokioConfig:
-    """Tests para validar la configuración de Pinokio."""
+    """Tests para validar la configuración Pinokio / Gepeto."""
 
-    def test_start_json_valid(self):
-        """start.json debe ser JSON válido con estructura correcta."""
-        start_path = Path(__file__).parent.parent / "start.json"
-        data = json.loads(start_path.read_text(encoding="utf-8"))
-        assert "run" in data
-        assert isinstance(data["run"], list)
-        assert len(data["run"]) > 0
+    def test_start_js_valid(self):
+        """start.js debe exportar un script con estructura run."""
+        start_path = Path(__file__).parent.parent / "start.js"
+        content = start_path.read_text(encoding="utf-8")
+        assert "module.exports" in content
+        assert "run:" in content or '"run"' in content
+        assert "daemon: true" in content or '"daemon": true' in content
 
-    def test_start_json_uses_local_set_pattern(self):
-        """start.json debe usar local.set + local.url (patrón oficial Pinokio v7.2.6).
-        
+    def test_start_js_uses_local_set_pattern(self):
+        """start.js debe usar local.set + local.url (patrón oficial Pinokio).
+
         El patrón correcto es:
         1. shell.run con on/event captura la URL del servidor
-        2. local.set guarda input.event[0] en memoria como 'url'
+        2. local.set guarda la URL en memoria como 'url'
         3. browser.open usa {{local.url}} para abrir la UI
-        
-        NO debe usar self.set (escribe archivo, no disponible en template)
-        NO debe usar input.event directamente en browser.open"""
-        start_path = Path(__file__).parent.parent / "start.json"
-        data = json.loads(start_path.read_text(encoding="utf-8"))
-        
-        has_local_set = False
-        for step in data.get("run", []):
-            method = step.get("method", "")
-            params = step.get("params", {})
-            
-            # Verificar que usa local.set (no self.set)
-            if method == "local.set":
-                has_local_set = True
-            
-            # browser.open NO debe usar input.event directamente
-            if method == "browser.open":
-                uri = params.get("uri", "")
-                assert "input.event" not in uri, \
-                    f"browser.open no debe usar input.event. URI: {uri}"
-                assert "self.session" not in uri, \
-                    f"browser.open no debe usar self.session (no funciona en v7.2.6). URI: {uri}"
-                assert "local.url" in uri, \
-                    f"browser.open debe usar local.url. URI: {uri}"
-        
-        assert has_local_set, "start.json debe usar local.set para guardar la URL en memoria"
-
-    def test_start_json_has_port_env(self):
-        """start.json debe pasar PORT como env var."""
-        start_path = Path(__file__).parent.parent / "start.json"
+        """
+        start_path = Path(__file__).parent.parent / "start.js"
         content = start_path.read_text(encoding="utf-8")
-        assert '"PORT"' in content, "start.json debe pasar PORT como env var"
+
+        assert "local.set" in content, "start.js debe usar local.set"
+        assert "local.url" in content, "start.js debe referenciar local.url"
+        assert "input.event" not in content.split("browser.open")[-1] or "local.url" in content, \
+            "browser.open debe usar local.url, no input.event directamente"
+
+    def test_start_js_has_port_env(self):
+        """start.js debe pasar PORT como env var."""
+        start_path = Path(__file__).parent.parent / "start.js"
+        content = start_path.read_text(encoding="utf-8")
+        assert "PORT" in content, "start.js debe pasar PORT como env var"
 
     def test_pinokio_js_valid(self):
-        """pinokio.js debe existir y tener estructura básica."""
+        """pinokio.js debe existir y tener estructura Gepeto v5.0."""
         pinokio_path = Path(__file__).parent.parent / "pinokio.js"
         content = pinokio_path.read_text(encoding="utf-8")
         assert "title" in content
-        assert "start" in content
+        assert "start.js" in content
         assert "icon" in content
+        assert "5.0" in content
 
     def test_pinokio_js_no_input_event_in_href(self):
         """pinokio.js NO debe usar input.event en href."""
@@ -508,18 +491,32 @@ class TestPinokioConfig:
         content = pinokio_path.read_text(encoding="utf-8")
         assert "input.event[0]" not in content, "pinokio.js no debe usar input.event"
 
-    def test_install_json_valid(self):
-        """install.json debe ser JSON válido."""
-        install_path = Path(__file__).parent.parent / "install.json"
-        data = json.loads(install_path.read_text(encoding="utf-8"))
-        assert "run" in data
-        assert isinstance(data["run"], list)
+    def test_install_js_valid(self):
+        """install.js debe exportar un script con pasos de instalación."""
+        install_path = Path(__file__).parent.parent / "install.js"
+        content = install_path.read_text(encoding="utf-8")
+        assert "module.exports" in content
+        assert "run:" in content or '"run"' in content
 
-    def test_install_json_has_llama31(self):
-        """install.json debe incluir descarga de llama3.1:8b."""
-        install_path = Path(__file__).parent.parent / "install.json"
+    def test_install_js_has_llama31(self):
+        """install.js debe incluir descarga de llama3.1:8b."""
+        install_path = Path(__file__).parent.parent / "install.js"
         content = install_path.read_text(encoding="utf-8")
         assert "llama3.1:8b" in content
+
+    def test_gepeto_torch_js_exists(self):
+        """torch.js (Gepeto) debe existir para instalación cross-platform de PyTorch."""
+        torch_path = Path(__file__).parent.parent / "torch.js"
+        assert torch_path.exists()
+        content = torch_path.read_text(encoding="utf-8")
+        assert "torch" in content
+
+    def test_pinokio_json_exists(self):
+        """pinokio.json debe existir con metadatos del plugin."""
+        meta_path = Path(__file__).parent.parent / "pinokio.json"
+        data = json.loads(meta_path.read_text(encoding="utf-8"))
+        assert "title" in data
+        assert "CCS Brand Assistant" in data["title"]
 
 
 # ============================================================

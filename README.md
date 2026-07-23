@@ -28,11 +28,15 @@ CCS Brand Assistant es un plugin para [Pinokio](https://pinokio.computer) que pe
 
 ```
 ccs-brand-assistant/
-├── pinokio.js          # Configuración y menú dinámico del plugin
-├── install.json        # Instalación con 1 click (Ollama + venv + deps)
-├── start.json          # Inicio del servidor como daemon
-├── stop.json           # Parada del servidor
-├── reset.json          # Desinstalación (conserva datos)
+├── pinokio.js          # Menú dinámico del plugin (Gepeto v5.0)
+├── pinokio.json        # Metadatos del plugin Pinokio
+├── install.js          # Instalación con 1 click (Ollama + venv + deps)
+├── start.js            # Inicio del servidor como daemon
+├── stop.js             # Parada del servidor
+├── reset.js            # Desinstalación (conserva datos)
+├── update.js           # Actualización (git pull + deps)
+├── torch.js            # Instalador cross-platform de PyTorch (Gepeto)
+├── link.js             # Deduplicación de librerías (Gepeto)
 ├── requirements.txt    # Dependencias Python
 ├── scripts/            # Scripts PowerShell para Windows
 │   ├── install_ollama.ps1   # Instala Ollama automáticamente
@@ -91,6 +95,29 @@ El modelo de texto se selecciona automáticamente según la RAM disponible:
 cd "$env:USERPROFILE\pinokio\api"
 git clone https://github.com/vtomasv/ccs-brand-assistant
 ```
+
+### Instalador Gepeto
+
+Este proyecto incluye scripts en formato [Gepeto](https://gepeto.pinokio.computer) (`.js`), el estándar de Pinokio para launchers de aplicaciones con IA. Los archivos generados son:
+
+| Archivo | Función |
+|---------|---------|
+| `install.js` | Instala Ollama, Python venv, Torch, Diffusers y datos |
+| `start.js` | Inicia el servidor FastAPI como daemon |
+| `stop.js` | Detiene el servidor |
+| `reset.js` | Elimina el venv (conserva `data/`) |
+| `update.js` | `git pull` + actualiza dependencias |
+| `torch.js` | PyTorch cross-platform (CPU/CUDA/ROCm) |
+| `pinokio.js` | Menú dinámico v5.0 |
+
+Para regenerar la estructura base con Gepeto desde cero:
+
+```bash
+cd ~/pinokio/api
+npx gepeto@latest "CCS Brand Assistant" "https://github.com/vtomasv/ccs-brand-assistant"
+```
+
+Luego personaliza `install.js` y `start.js` según las necesidades del proyecto (Ollama, `server/app.py`, etc.).
 
 ---
 
