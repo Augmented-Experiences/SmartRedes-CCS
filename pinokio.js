@@ -1,10 +1,11 @@
 /**
- * CCS Brand Assistant — Pinokio launcher (Gepeto v5.0)
+ * CCS Brand Assistant — Pinokio launcher (Gepeto v5.0 + one-click autostart)
  *
- * Menú dinámico según estado del plugin:
- *   - No instalado: Instalar
- *   - Instalado y corriendo: Abrir UI + Terminal + Detener
- *   - Instalado y detenido: Iniciar + Actualizar + Desinstalar
+ * Flujo one-click (Pinokio 2.0+):
+ *   1. Usuario abre la app → se ejecuta automáticamente el script con default: true
+ *   2. Si no está instalado → install.js (instala todo y lanza start.js al final)
+ *   3. Si está instalado → start.js (abre la UI automáticamente)
+ *   4. Si ya corre → botón "Abrir UI" apunta directo a la interfaz
  */
 module.exports = {
   version: "5.0",
@@ -23,6 +24,7 @@ module.exports = {
       link: info.running("link.js"),
     }
 
+    // ── Instalando ──────────────────────────────────────────────────────────
     if (running.install) {
       return [{
         default: true,
@@ -32,27 +34,16 @@ module.exports = {
       }]
     }
 
-    if (installed) {
-      if (running.start) {
-        let local = info.local("start.js")
-        if (local && local.url) {
-          return [{
-            default: true,
-            icon: "fa-solid fa-arrow-up-right-from-square",
-            text: "Abrir UI",
-            href: local.url,
-          }, {
-            icon: "fa-solid fa-terminal",
-            text: "Terminal",
-            href: "start.js",
-          }, {
-            icon: "fa-solid fa-stop",
-            text: "Detener",
-            href: "stop.js",
-          }]
-        }
+    // ── Corriendo ───────────────────────────────────────────────────────────
+    if (installed && running.start) {
+      let local = info.local("start.js")
+      if (local && local.url) {
         return [{
           default: true,
+          icon: "fa-solid fa-arrow-up-right-from-square",
+          text: "Abrir UI",
+          href: local.url,
+        }, {
           icon: "fa-solid fa-terminal",
           text: "Terminal",
           href: "start.js",
@@ -62,43 +53,54 @@ module.exports = {
           href: "stop.js",
         }]
       }
+      return [{
+        default: true,
+        icon: "fa-solid fa-terminal",
+        text: "Iniciando...",
+        href: "start.js",
+      }, {
+        icon: "fa-solid fa-stop",
+        text: "Detener",
+        href: "stop.js",
+      }]
+    }
 
-      if (running.stop) {
-        return [{
-          default: true,
-          icon: "fa-solid fa-stop",
-          text: "Deteniendo...",
-          href: "stop.js",
-        }]
-      }
+    // ── Operaciones en curso ────────────────────────────────────────────────
+    if (running.stop) {
+      return [{
+        default: true,
+        icon: "fa-solid fa-stop",
+        text: "Deteniendo...",
+        href: "stop.js",
+      }]
+    }
+    if (running.update) {
+      return [{
+        default: true,
+        icon: "fa-solid fa-arrows-rotate",
+        text: "Actualizando...",
+        href: "update.js",
+      }]
+    }
+    if (running.reset) {
+      return [{
+        default: true,
+        icon: "fa-regular fa-circle-xmark",
+        text: "Desinstalando...",
+        href: "reset.js",
+      }]
+    }
+    if (running.link) {
+      return [{
+        default: true,
+        icon: "fa-solid fa-file-zipper",
+        text: "Optimizando espacio...",
+        href: "link.js",
+      }]
+    }
 
-      if (running.update) {
-        return [{
-          default: true,
-          icon: "fa-solid fa-arrows-rotate",
-          text: "Actualizando...",
-          href: "update.js",
-        }]
-      }
-
-      if (running.reset) {
-        return [{
-          default: true,
-          icon: "fa-regular fa-circle-xmark",
-          text: "Desinstalando...",
-          href: "reset.js",
-        }]
-      }
-
-      if (running.link) {
-        return [{
-          default: true,
-          icon: "fa-solid fa-file-zipper",
-          text: "Optimizando espacio...",
-          href: "link.js",
-        }]
-      }
-
+    // ── Instalado, detenido → autostart start.js ────────────────────────────
+    if (installed) {
       return [{
         default: true,
         icon: "fa-solid fa-play",
@@ -124,6 +126,7 @@ module.exports = {
       }]
     }
 
+    // ── No instalado → autostart install.js (one-click) ─────────────────────
     return [{
       default: true,
       icon: "fa-solid fa-download",

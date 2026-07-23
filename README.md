@@ -81,12 +81,14 @@ El modelo de texto se selecciona automáticamente según la RAM disponible:
 
 ## Instalación
 
-### Opción 1: Instalación desde Pinokio (recomendada)
+### Opción 1: Instalación desde Pinokio (recomendada — one-click)
 
 1. Abre Pinokio en tu computadora.
 2. Ve a **Discover** o **Install from URL**.
 3. Ingresa la URL del repositorio: `https://github.com/vtomasv/ccs-brand-assistant`
-4. Haz clic en **Instalar** y espera a que el proceso termine automáticamente.
+4. Haz clic en **Instalar** (o simplemente abre la app).
+
+**Flujo one-click:** al abrir la app, Pinokio ejecuta automáticamente `install.js` si no está instalada, o `start.js` si ya lo está. Al terminar la instalación, la app se inicia sola y abre el navegador en la UI. No necesitas pulsar "Iniciar" por separado.
 
 ### Opción 2: Instalación manual (Windows)
 

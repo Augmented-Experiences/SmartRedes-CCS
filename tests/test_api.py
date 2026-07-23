@@ -504,6 +504,29 @@ class TestPinokioConfig:
         content = install_path.read_text(encoding="utf-8")
         assert "llama3.1:8b" in content
 
+    def test_install_js_auto_starts(self):
+        """install.js debe lanzar start.js al terminar (one-click)."""
+        install_path = Path(__file__).parent.parent / "install.js"
+        content = install_path.read_text(encoding="utf-8")
+        assert "script.start" in content
+        assert "start.js" in content
+
+    def test_pinokio_js_one_click_autostart(self):
+        """pinokio.js debe usar default: true para autostart install/start."""
+        pinokio_path = Path(__file__).parent.parent / "pinokio.js"
+        content = pinokio_path.read_text(encoding="utf-8")
+        assert "default: true" in content
+        assert "install.js" in content
+        assert "start.js" in content
+
+    def test_launch_js_exists(self):
+        """launch.js debe existir como entry point one-click."""
+        launch_path = Path(__file__).parent.parent / "launch.js"
+        content = launch_path.read_text(encoding="utf-8")
+        assert launch_path.exists()
+        assert "install.js" in content
+        assert "start.js" in content
+
     def test_gepeto_torch_js_exists(self):
         """torch.js (Gepeto) debe existir para instalación cross-platform de PyTorch."""
         torch_path = Path(__file__).parent.parent / "torch.js"

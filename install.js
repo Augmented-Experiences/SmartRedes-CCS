@@ -141,15 +141,17 @@ module.exports = {
 
     // ── Completado ────────────────────────────────────────────────────────────
     {
-      method: "log",
-      params: {
-        html: "<div style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:20px'><div style='background:linear-gradient(135deg,#0f2d1a,#052e16);border:1px solid #16a34a44;border-radius:12px;padding:24px;text-align:center'><div style='background:#22c55e;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px;color:#fff'>&#10003;</div><h3 style='color:#22c55e;font-size:18px;margin:0 0 8px'>Instalaci&oacute;n completada</h3><p style='color:#86efac;font-size:13px;margin:0'>CCS Brand Assistant est&aacute; listo. Haz click en <strong>Iniciar</strong>.</p></div></div>"
-      }
-    },
-    {
       method: "notify",
       params: {
-        html: "CCS Brand Assistant instalado correctamente. Haz click en Iniciar."
+        html: "Instalación completada. Iniciando CCS Brand Assistant..."
+      }
+    },
+
+    // One-click: lanzar la app automáticamente al terminar de instalar
+    {
+      method: "script.start",
+      params: {
+        uri: "start.js"
       }
     }
   ]

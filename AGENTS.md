@@ -18,11 +18,9 @@ to develop or run it here. There is no database — all state is JSON under `dat
   gracefully without them.
 
 ### Pinokio / Gepeto launcher
-- Pinokio scripts are **Gepeto v5.0** format: `install.js`, `start.js`, `stop.js`, `reset.js`, `update.js`, `torch.js`, `link.js`, `pinokio.js`, `pinokio.json`.
-- Legacy `.json` scripts (`install.json`, etc.) were replaced by `.js` equivalents.
-- Default port is `7860`; `start.js` sets `local.url` to `{server}/ui/index.html` for the "Abrir UI" menu button.
-- `torch.js` is adapted from Gepeto (uses `pip`, not `uv pip`) for broader compatibility.
-- Manual dev setup without Pinokio still uses `scripts/setup_venv.sh`.
+- Pinokio scripts are **Gepeto v5.0** format with **one-click autostart** (`default: true` in `pinokio.js`).
+- `install.js` chains to `start.js` via `script.start` at the end of install.
+- `launch.js` is an explicit one-click entry (install if needed, else start).
 
 ### Running the app (dev) `PORT=7860 venv/bin/python server/app.py` (binds `127.0.0.1:7860` only).
 - UI: `http://127.0.0.1:7860/ui/index.html` (root `/` 307-redirects there).
