@@ -36,7 +36,7 @@ if (Test-Path $venvPy) {
     $ver = & $venvPy --version 2>&1
     Write-Host "  OK: venv encontrado — $ver" -ForegroundColor Green
 } else {
-    Write-Host "  NO ENCONTRADO — Ejecuta install.json desde Pinokio" -ForegroundColor Red
+    Write-Host "  NO ENCONTRADO — Ejecuta install.js desde Pinokio" -ForegroundColor Red
 }
 Write-Host ""
 

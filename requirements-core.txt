@@ -3,7 +3,7 @@
 # ============================================================
 # Solo las dependencias esenciales para que el servidor arranque.
 # Las dependencias opcionales (playwright, diffusers, torch)
-# se instalan por separado en install.json.
+# se instalan por separado en install.js (Gepeto).
 # ============================================================
 
 fastapi>=0.110.0

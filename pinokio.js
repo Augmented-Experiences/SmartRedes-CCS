@@ -1,71 +1,137 @@
 /**
- * CCS Brand Assistant — Configuración de Plugin Pinokio
+ * CCS Brand Assistant — Pinokio launcher (Gepeto v5.0 + one-click autostart)
  *
- * Menú dinámico según estado del plugin:
- *   - No instalado: botón de instalación
- *   - Instalado y corriendo: estado activo + botón abrir UI + detener
- *   - Instalado y detenido: botón iniciar
- *
- * Nota: La URL del servidor se almacena en memoria via local.set
- * en start.json (patrón oficial de Pinokio para daemon scripts).
- * Se accede via kernel.memory.local para el botón "Abrir UI".
+ * Flujo one-click (Pinokio 2.0+):
+ *   1. Usuario abre la app → se ejecuta automáticamente el script con default: true
+ *   2. Si no está instalado → install.js (instala todo y lanza start.js al final)
+ *   3. Si está instalado → start.js (abre la UI automáticamente)
+ *   4. Si ya corre → botón "Abrir UI" apunta directo a la interfaz
  */
 module.exports = {
+  version: "5.0",
   title: "CCS Brand Assistant",
   description: "Plataforma de ADN de marca y campañas digitales con IA local para PYMEs — Cámara de Comercio de Santiago",
   icon: "icon.png",
 
   menu: async (kernel, info) => {
-    // Verificar si el plugin está instalado (venv creado)
-    var installed = await kernel.exists(__dirname, "venv")
-
-    if (!installed) {
-      return [
-        {
-          default: true,
-          icon: "fa-solid fa-download",
-          text: "Instalar",
-          href: "install.json",
-        },
-      ]
+    let installed = info.exists("venv")
+    let running = {
+      install: info.running("install.js"),
+      start: info.running("start.js"),
+      stop: info.running("stop.js"),
+      update: info.running("update.js"),
+      reset: info.running("reset.js"),
+      link: info.running("link.js"),
     }
 
-    // Verificar si el servidor está corriendo
-    var running = await kernel.script.running(__dirname, "start.json")
+    // ── Instalando ──────────────────────────────────────────────────────────
+    if (running.install) {
+      return [{
+        default: true,
+        icon: "fa-solid fa-plug",
+        text: "Instalando...",
+        href: "install.js",
+      }]
+    }
 
-    if (running) {
-      return [
-        {
-          icon: "fa-solid fa-circle",
-          text: "En ejecución",
-          href: "start.json",
-          style: "color: #3DAE2B",
-        },
-        {
+    // ── Corriendo ───────────────────────────────────────────────────────────
+    if (installed && running.start) {
+      let local = info.local("start.js")
+      if (local && local.url) {
+        return [{
+          default: true,
           icon: "fa-solid fa-arrow-up-right-from-square",
           text: "Abrir UI",
-          href: "start.json",
-        },
-        {
+          href: local.url,
+        }, {
+          icon: "fa-solid fa-terminal",
+          text: "Terminal",
+          href: "start.js",
+        }, {
           icon: "fa-solid fa-stop",
           text: "Detener",
-          href: "stop.json",
-        },
-      ]
+          href: "stop.js",
+        }]
+      }
+      return [{
+        default: true,
+        icon: "fa-solid fa-terminal",
+        text: "Iniciando...",
+        href: "start.js",
+      }, {
+        icon: "fa-solid fa-stop",
+        text: "Detener",
+        href: "stop.js",
+      }]
     }
 
-    return [
-      {
+    // ── Operaciones en curso ────────────────────────────────────────────────
+    if (running.stop) {
+      return [{
+        default: true,
+        icon: "fa-solid fa-stop",
+        text: "Deteniendo...",
+        href: "stop.js",
+      }]
+    }
+    if (running.update) {
+      return [{
+        default: true,
+        icon: "fa-solid fa-arrows-rotate",
+        text: "Actualizando...",
+        href: "update.js",
+      }]
+    }
+    if (running.reset) {
+      return [{
+        default: true,
+        icon: "fa-regular fa-circle-xmark",
+        text: "Desinstalando...",
+        href: "reset.js",
+      }]
+    }
+    if (running.link) {
+      return [{
+        default: true,
+        icon: "fa-solid fa-file-zipper",
+        text: "Optimizando espacio...",
+        href: "link.js",
+      }]
+    }
+
+    // ── Instalado, detenido → autostart start.js ────────────────────────────
+    if (installed) {
+      return [{
         default: true,
         icon: "fa-solid fa-play",
         text: "Iniciar",
-        href: "start.json",
-      },
-      {
-        icon: "fa-solid fa-trash",
-        text: "Desinstalar",
-        href: "reset.json",
-      },
-    ]
+        href: "start.js",
+      }, {
+        icon: "fa-solid fa-arrows-rotate",
+        text: "Actualizar",
+        href: "update.js",
+      }, {
+        icon: "fa-solid fa-plug",
+        text: "Reinstalar",
+        href: "install.js",
+      }, {
+        icon: "fa-solid fa-file-zipper",
+        text: "<div><strong>Ahorrar espacio</strong><div>Deduplica librerías redundantes</div></div>",
+        href: "link.js",
+      }, {
+        icon: "fa-regular fa-circle-xmark",
+        text: "<div><strong>Desinstalar</strong><div>Elimina el entorno virtual (conserva data/)</div></div>",
+        href: "reset.js",
+        confirm: "¿Desinstalar CCS Brand Assistant? Los datos en data/ se conservarán.",
+      }]
+    }
+
+    // ── No instalado → autostart install.js (one-click) ─────────────────────
+    return [{
+      default: true,
+      icon: "fa-solid fa-download",
+      text: "Instalar",
+      href: "install.js",
+    }]
   },
 }
