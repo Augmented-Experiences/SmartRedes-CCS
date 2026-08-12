@@ -1,8 +1,8 @@
 # ============================================================
-# CCS Brand Assistant — Test Suite para Windows
+# SmartRedes — Test Suite para Windows
 # ============================================================
 # Ejecutar desde PowerShell:
-#   cd ccs-brand-assistant
+#   cd smartredes
 #   .\tests\test_windows.ps1
 # ============================================================
 
@@ -14,7 +14,7 @@ $script:TESTS = @()
 function Write-Header {
     Write-Host ""
     Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "  CCS Brand Assistant — Test Suite (Windows)" -ForegroundColor Cyan
+    Write-Host "  SmartRedes — Test Suite (Windows)" -ForegroundColor Cyan
     Write-Host "============================================================" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -102,9 +102,11 @@ Test-Assert "start.json pasa PORT como env var" {
     $content -match '"PORT"'
 }
 
-Test-Assert "start.json usa self.session.url en browser.open" {
+Test-Assert "start.json usa local.set y local.url para browser.open" {
     $content = Get-Content "$ROOT\start.json" -Raw
-    $content -match "self\.session\.url"
+    ($content -match '"method": "local.set"') -and
+    ($content -match '\{\{local\.url\}\}') -and
+    -not ($content -match "self\.session\.url")
 }
 
 Test-Assert "install.json es JSON válido" {
@@ -117,9 +119,9 @@ Test-Assert "install.json incluye llama3.1:8b" {
     $content -match "llama3\.1:8b"
 }
 
-Test-Assert "pinokio.js tiene título CCS Brand Assistant" {
+Test-Assert "pinokio.js tiene título SmartRedes" {
     $content = Get-Content "$ROOT\pinokio.js" -Raw
-    $content -match "CCS Brand Assistant"
+    $content -match "SmartRedes"
 }
 
 Test-Assert "pinokio.js NO contiene input.event en href" {
@@ -127,9 +129,10 @@ Test-Assert "pinokio.js NO contiene input.event en href" {
     -not ($content -match "input\.event\[0\]")
 }
 
-Test-Assert "pinokio.js usa session.json para URL" {
+Test-Assert "pinokio.js usa memoria local para URL" {
     $content = Get-Content "$ROOT\pinokio.js" -Raw
-    $content -match "session"
+    ($content -match "kernel\.memory\.local") -and
+    -not ($content -match "session\.json")
 }
 
 # ============================================================
@@ -165,23 +168,9 @@ foreach ($dep in $coreDeps) {
 Write-Host ""
 Write-Host "--- Ollama ---" -ForegroundColor Yellow
 
-Test-Assert "Ollama instalado" {
-    $ollama = Get-Command ollama -ErrorAction SilentlyContinue
-    if ($null -eq $ollama) {
-        # Buscar en rutas comunes
-        $paths = @(
-            "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe",
-            "$env:ProgramFiles\Ollama\ollama.exe",
-            "$env:USERPROFILE\AppData\Local\Programs\Ollama\ollama.exe"
-        )
-        $found = $false
-        foreach ($p in $paths) {
-            if (Test-Path $p) { $found = $true; break }
-        }
-        $found
-    } else {
-        $true
-    }
+Test-Assert "start.json incluye arranque automático de Ollama" {
+    $content = Get-Content "$ROOT\start.json" -Raw
+    $content -match "ollama serve"
 }
 
 Test-Assert "Ollama respondiendo en localhost:11434" {

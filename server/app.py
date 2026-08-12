@@ -1,5 +1,5 @@
 """
-CCS Brand Assistant — Backend FastAPI
+SmartRedes — Backend FastAPI
 Plugin de Pinokio para gestión de ADN de marca y campañas digitales con IA local.
 
 Arquitectura:
@@ -45,7 +45,13 @@ _thread_pool = ThreadPoolExecutor(max_workers=4)
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).parent.parent.resolve()   # raíz del plugin
 APP_DIR  = BASE_DIR / "app"
-DATA_DIR = BASE_DIR / "data"
+# La variable SmartRedes es la configuración vigente. La alternativa heredada
+# preserva el acceso a datos configurados antes del cambio de nombre.
+DATA_DIR = Path(
+    os.environ.get("SMARTREDES_DATA_DIR")
+    or os.environ.get("CCS_DATA_DIR")
+    or BASE_DIR / "data"
+)
 DEFAULTS_DIR = BASE_DIR / "defaults"
 
 def _parse_port():
@@ -112,12 +118,12 @@ try:
         DEFAULT_DIFFUSION_MODEL,
     )
     IMAGE_ENGINE_AVAILABLE = True
-    logger_tmp = logging.getLogger("css-brand-assistant")
+    logger_tmp = logging.getLogger("smartredes")
     logger_tmp.info("Motor de imagen embebido (Diffusers) disponible")
 except ImportError as _ie:
     IMAGE_ENGINE_AVAILABLE = False
     DEFAULT_DIFFUSION_MODEL = "SimianLuo/LCM_Dreamshaper_v7"
-    logging.getLogger("css-brand-assistant").warning(
+    logging.getLogger("smartredes").warning(
         f"Motor de imagen embebido no disponible: {_ie}. "
         "Instala: pip install torch diffusers transformers accelerate safetensors"
     )
@@ -169,12 +175,12 @@ def _auto_unload_engine():
     try:
         if IMAGE_ENGINE_AVAILABLE and _engine_is_ready():
             _engine_unload()
-            logging.getLogger("css-brand-assistant").info(
+            logging.getLogger("smartredes").info(
                 f"[TTL] Motor de imágenes descargado tras {_ENGINE_TTL_MINUTES} min de inactividad. "
                 f"RAM liberada."
             )
     except Exception as e:
-        logging.getLogger("css-brand-assistant").warning(f"[TTL] Error descargando motor: {e}")
+        logging.getLogger("smartredes").warning(f"[TTL] Error descargando motor: {e}")
     with _engine_ttl_lock:
         _engine_ttl_timer = None
 
@@ -185,12 +191,12 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger("css-brand-assistant")
+logger = logging.getLogger("smartredes")
 
 # Agregar RotatingFileHandler para evitar crecimiento ilimitado de logs
 try:
     from logging.handlers import RotatingFileHandler
-    _log_dir = Path(os.environ.get("CCS_DATA_DIR", Path(__file__).parent.parent / "data")) / "audit"
+    _log_dir = DATA_DIR / "audit"
     _log_dir.mkdir(parents=True, exist_ok=True)
     _log_file = _log_dir / "app.log"
     _file_handler = RotatingFileHandler(
@@ -206,7 +212,7 @@ except Exception:
 # FastAPI app
 # ---------------------------------------------------------------------------
 app = FastAPI(
-    title="CCS Brand Assistant",
+    title="SmartRedes",
     description="Plugin Pinokio para ADN de marca y campañas digitales con IA local — Cámara de Comercio de Santiago",
     version="0.2.0",
 )
@@ -330,7 +336,7 @@ async def startup_event():
     # Verificar modelos disponibles en Ollama y actualizar config si es necesario
     await _verify_and_fix_models()
 
-    logger.info(f"CCS Brand Assistant iniciado. DATA_DIR={DATA_DIR}")
+    logger.info(f"SmartRedes iniciado. DATA_DIR={DATA_DIR}")
 
 
 @app.on_event("shutdown")
@@ -344,7 +350,7 @@ async def shutdown_event():
             _engine_ttl_timer = None
     # Apagar el ThreadPoolExecutor sin esperar tareas pendientes
     _thread_pool.shutdown(wait=False)
-    logger.info("CCS Brand Assistant detenido. Recursos liberados.")
+    logger.info("SmartRedes detenido. Recursos liberados.")
 
 
 async def _verify_and_fix_models():
@@ -503,6 +509,7 @@ def _start_pull_background(model: str) -> None:
 # Protege contra escrituras simultáneas desde peticiones async concurrentes.
 # ---------------------------------------------------------------------------
 _file_locks: Dict[str, asyncio.Lock] = {}
+_sync_file_locks: Dict[str, threading.Lock] = {}
 _file_locks_mutex = threading.Lock()
 
 def _get_file_lock(path: Path) -> asyncio.Lock:
@@ -514,6 +521,15 @@ def _get_file_lock(path: Path) -> asyncio.Lock:
         return _file_locks[key]
 
 
+def _get_sync_file_lock(path: Path) -> threading.Lock:
+    """Obtiene o crea un threading.Lock para escrituras síncronas por archivo."""
+    key = str(path.resolve())
+    with _file_locks_mutex:
+        if key not in _sync_file_locks:
+            _sync_file_locks[key] = threading.Lock()
+        return _sync_file_locks[key]
+
+
 def save_json(path: Path, data: Any) -> None:
     """Guarda datos como JSON con formato legible (escritura atómica).
     
@@ -522,19 +538,22 @@ def save_json(path: Path, data: Any) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(data, indent=2, ensure_ascii=False, default=str)
-    # Escritura atómica: escribir a .tmp y luego renombrar
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    try:
-        tmp_path.write_text(content, encoding="utf-8")
-        # os.replace es atómico en la mayoría de sistemas de archivos
-        import os as _os
-        _os.replace(str(tmp_path), str(path))
-    except Exception as e:
-        # Fallback: escritura directa si el rename falla
-        logger.debug(f"Escritura atómica fallida para {path}, usando fallback: {e}")
-        if tmp_path.exists():
-            tmp_path.unlink()
-        path.write_text(content, encoding="utf-8")
+    # Coordinar escritores síncronos al mismo archivo. Además de evitar datos
+    # corruptos, impide que dos procesos compitan por el mismo temporal .tmp.
+    with _get_sync_file_lock(path):
+        # Escritura atómica: escribir a .tmp y luego renombrar.
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        try:
+            tmp_path.write_text(content, encoding="utf-8")
+            # os.replace es atómico en la mayoría de sistemas de archivos.
+            import os as _os
+            _os.replace(str(tmp_path), str(path))
+        except Exception as e:
+            # Fallback: escritura directa si el rename falla.
+            logger.debug(f"Escritura atómica fallida para {path}, usando fallback: {e}")
+            if tmp_path.exists():
+                tmp_path.unlink()
+            path.write_text(content, encoding="utf-8")
 
 
 async def save_json_safe(path: Path, data: Any) -> None:
@@ -5042,7 +5061,7 @@ def _collect_export_data() -> dict:
     export_data = {
         "export_version": "1.0",
         "exported_at": datetime.utcnow().isoformat(),
-        "plugin_name": "ccs-brand-assistant",
+        "plugin_name": "smartredes",
         "config": None,
         "agents": None,
         "brands": [],
@@ -5157,7 +5176,7 @@ def export_all_data():
         }
 
         # Guardar en archivo temporal y devolver
-        export_filename = f"ccs_brand_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+        export_filename = f"smartredes_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
         exports_dir = DATA_DIR / "exports"
         exports_dir.mkdir(parents=True, exist_ok=True)
         export_file = exports_dir / export_filename

@@ -1,5 +1,5 @@
 """
-CCS Brand Assistant — Web Scraper Multi-Estrategia
+SmartRedes — Web Scraper Multi-Estrategia
 ====================================================
 Módulo de extracción de contenido web con soporte para:
   - Sitios estáticos (HTML puro, WordPress, etc.)
@@ -29,7 +29,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-logger = logging.getLogger("css-brand-assistant")
+logger = logging.getLogger("smartredes")
 
 # ---------------------------------------------------------------------------
 # Constantes

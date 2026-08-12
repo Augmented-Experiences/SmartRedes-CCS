@@ -1,5 +1,5 @@
 # ============================================================
-# CCS Brand Assistant — Dependencias CORE (servidor web)
+# SmartRedes — Dependencias CORE (servidor web)
 # ============================================================
 # Solo las dependencias esenciales para que el servidor arranque.
 # Las dependencias opcionales (playwright, diffusers, torch)

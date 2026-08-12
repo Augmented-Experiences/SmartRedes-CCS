@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "server"))
 @pytest.fixture
 def data_dir(tmp_path):
     """Crea un directorio temporal para datos y lo configura."""
-    os.environ["CCS_DATA_DIR"] = str(tmp_path)
+    os.environ["SMARTREDES_DATA_DIR"] = str(tmp_path)
     (tmp_path / "brands").mkdir(parents=True, exist_ok=True)
     (tmp_path / "campaigns").mkdir(parents=True, exist_ok=True)
     (tmp_path / "audit").mkdir(parents=True, exist_ok=True)
@@ -38,7 +38,7 @@ def data_dir(tmp_path):
 @pytest.fixture
 def app_client(data_dir):
     """Crea un cliente de test de FastAPI."""
-    with patch.dict(os.environ, {"CCS_DATA_DIR": str(data_dir)}):
+    with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(data_dir)}):
         # Reimportar para que tome el nuevo DATA_DIR
         import importlib
         import app as app_module

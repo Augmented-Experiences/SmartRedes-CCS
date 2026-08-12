@@ -1,5 +1,5 @@
 """
-image_engine.py — Motor de generación de imágenes embebido para CSS Brand Assistant.
+image_engine.py — Motor de generación de imágenes embebido para SmartRedes.
 
 Usa HuggingFace Diffusers con modelos LCM (Latent Consistency Models) que permiten
 generar imágenes de calidad en 2-4 pasos en CPU, sin necesidad de GPU.
@@ -24,14 +24,14 @@ import base64
 from pathlib import Path
 from typing import Optional, Callable
 
-logger = logging.getLogger("css-brand-assistant")
+logger = logging.getLogger("smartredes")
 
 # ─── Constantes ────────────────────────────────────────────────────────────────
 
 # Directorio de caché para modelos descargados
 MODELS_CACHE_DIR = Path(os.environ.get(
     "CSS_MODELS_CACHE",
-    str(Path.home() / ".cache" / "css-brand-assistant" / "models")
+    str(Path.home() / ".cache" / "smartredes" / "models")
 ))
 
 # Modelo por defecto: LCM-Dreamshaper-v7 (mejor balance velocidad/calidad en CPU)

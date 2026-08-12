@@ -1,1 +1,1 @@
-# Tests package for CCS Brand Assistant
+# Tests package for SmartRedes

@@ -1,5 +1,5 @@
 """
-Tests de integración para concurrencia y robustez del CCS Brand Assistant.
+Tests de integración para concurrencia y robustez del SmartRedes.
 
 Verifica:
 - S1-03: Escritura concurrente con save_json (escritura atómica)
@@ -32,7 +32,7 @@ class TestConcurrentFileWrites:
 
     def setup_method(self, method):
         """Crea un directorio temporal para pruebas."""
-        self.tmp_dir = Path(tempfile.mkdtemp(prefix="ccs_test_concurrent_"))
+        self.tmp_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_concurrent_"))
 
     def teardown_method(self, method):
         """Limpia directorios temporales."""
@@ -45,7 +45,7 @@ class TestConcurrentFileWrites:
         en el rename atómico (que es el comportamiento esperado de save_json).
         La protección real de concurrencia se da via save_json_safe (async locks).
         """
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import save_json
 
             errors = []
@@ -83,7 +83,7 @@ class TestConcurrentFileWrites:
 
     def test_concurrent_reads_and_writes(self):
         """Lecturas y escrituras simultáneas no deben causar errores."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import save_json, load_json
 
             target_file = self.tmp_dir / "rw_test.json"
@@ -126,7 +126,7 @@ class TestConcurrentFileWrites:
 
     def test_save_json_creates_parent_dirs(self):
         """save_json debe crear directorios padre si no existen."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import save_json
 
             nested_file = self.tmp_dir / "deep" / "nested" / "dir" / "test.json"
@@ -136,7 +136,7 @@ class TestConcurrentFileWrites:
 
     def test_save_json_atomic_write(self):
         """save_json debe escribir atómicamente (no dejar archivos parciales)."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import save_json
 
             target_file = self.tmp_dir / "atomic_test.json"
@@ -154,7 +154,7 @@ class TestConcurrentFileWrites:
 
     def test_no_tmp_files_left_after_write(self):
         """No deben quedar archivos .tmp después de una escritura exitosa."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import save_json
 
             target_file = self.tmp_dir / "clean_test.json"
@@ -174,7 +174,7 @@ class TestDataIntegrity:
 
     def setup_method(self, method):
         """Crea un directorio temporal."""
-        self.tmp_dir = Path(tempfile.mkdtemp(prefix="ccs_test_integrity_"))
+        self.tmp_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_integrity_"))
 
     def teardown_method(self, method):
         """Limpia directorios temporales."""
@@ -183,7 +183,7 @@ class TestDataIntegrity:
 
     def test_load_json_with_corrupted_file(self):
         """load_json debe retornar default si el archivo está corrupto."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import load_json
 
             corrupted_file = self.tmp_dir / "corrupted.json"
@@ -194,7 +194,7 @@ class TestDataIntegrity:
 
     def test_load_json_with_empty_file(self):
         """load_json debe retornar default si el archivo está vacío."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import load_json
 
             empty_file = self.tmp_dir / "empty.json"
@@ -205,7 +205,7 @@ class TestDataIntegrity:
 
     def test_load_json_nonexistent_file(self):
         """load_json debe retornar default si el archivo no existe."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import load_json
 
             result = load_json(self.tmp_dir / "nonexistent.json", {"empty": True})
@@ -281,7 +281,7 @@ class TestAuditLogging:
 
     def setup_method(self, method):
         """Crea un directorio temporal."""
-        self.tmp_dir = Path(tempfile.mkdtemp(prefix="ccs_test_audit_"))
+        self.tmp_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_audit_"))
         (self.tmp_dir / "audit").mkdir(parents=True)
 
     def teardown_method(self, method):
@@ -345,7 +345,7 @@ class TestSaveJsonSafeAsync:
 
     def setup_method(self, method):
         """Crea un directorio temporal."""
-        self.tmp_dir = Path(tempfile.mkdtemp(prefix="ccs_test_async_"))
+        self.tmp_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_async_"))
 
     def teardown_method(self, method):
         """Limpia directorios temporales."""
@@ -355,7 +355,7 @@ class TestSaveJsonSafeAsync:
     @pytest.mark.asyncio
     async def test_save_json_safe_basic(self):
         """save_json_safe debe guardar datos correctamente."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import save_json_safe
             target_file = self.tmp_dir / "async_test.json"
             await save_json_safe(target_file, {"async": True, "value": 42})
@@ -368,7 +368,7 @@ class TestSaveJsonSafeAsync:
     async def test_save_json_safe_concurrent_async(self):
         """Múltiples llamadas async concurrentes no deben corromper datos."""
         import asyncio
-        with patch.dict(os.environ, {"CCS_DATA_DIR": str(self.tmp_dir)}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": str(self.tmp_dir)}):
             from app import save_json_safe
             target_file = self.tmp_dir / "async_concurrent.json"
 

@@ -1,5 +1,5 @@
 # ============================================================
-# CCS Brand Assistant — Dependencias Python
+# SmartRedes — Dependencias Python
 # ============================================================
 # Instalación automática via install.json de Pinokio.
 # Para instalar manualmente:

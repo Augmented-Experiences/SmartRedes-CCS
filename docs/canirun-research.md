@@ -33,7 +33,7 @@ La velocidad de tokens se basa en:
 - Bandwidth de memoria
 - Si el modelo cabe completamente en VRAM o necesita offloading a RAM
 
-## Adaptación para CCS Brand Assistant
+## Adaptación para SmartRedes
 Para nuestro caso, necesitamos:
 1. Detectar RAM total del sistema (ya disponible via Pinokio {{ram}})
 2. Detectar GPU/VRAM si es posible (via Ollama API o sistema)

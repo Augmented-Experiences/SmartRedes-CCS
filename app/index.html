@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CCS Brand Assistant — Cámara de Comercio de Santiago</title>
+  <title>SmartRedes — Cámara de Comercio de Santiago</title>
   <style>
     /* ===== FUENTES CCS ===== */
     @font-face {
@@ -977,7 +977,7 @@
       <img src="logo-ccs.svg" alt="Cámara de Comercio de Santiago" class="sidebar-logo-img" onerror="this.src='icon.png'" />
       <div class="sidebar-logo-divider"></div>
       <div>
-        <div class="sidebar-logo-text">Brand Assistant</div>
+        <div class="sidebar-logo-text">SmartRedes</div>
         <div class="sidebar-logo-sub">IA local para PYMEs</div>
       </div>
     </div>
@@ -4539,7 +4539,7 @@ function exportData() {
     .then(function(r) {
       if (!r.ok) throw new Error('Error al exportar');
       var disposition = r.headers.get('content-disposition') || '';
-      var filename = 'ccs_brand_export.json';
+      var filename = 'smartredes_export.json';
       var match = disposition.match(/filename="?([^"]+)"?/);
       if (match) filename = match[1];
       return r.blob().then(function(blob) { return {blob: blob, filename: filename}; });

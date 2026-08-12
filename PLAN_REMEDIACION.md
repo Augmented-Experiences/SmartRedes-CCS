@@ -1,4 +1,4 @@
-# Plan de Remediación y Mejoras de Seguridad: CCS Brand Assistant
+# Plan de Remediación y Mejoras de Seguridad: SmartRedes
 
 Este documento categoriza y prioriza las falencias reportadas en el *Análisis de código y seguridad (v0.3.0)*, ajustadas al contexto de ejecución on-premise (localhost, single-user) a través de Pinokio.
 

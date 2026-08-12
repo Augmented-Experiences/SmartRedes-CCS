@@ -1,10 +1,10 @@
-# CCS Brand Assistant
+# SmartRedes
 
 **Plugin de Pinokio para gestión de ADN de marca y campañas digitales con IA local para PYMEs**
 
 > Desarrollado para la **Cámara de Comercio de Santiago (CCS)**
 
-CCS Brand Assistant es un plugin para [Pinokio](https://pinokio.computer) que permite a las pequeñas y medianas empresas construir una identidad de marca estructurada —denominada **ADN empresarial**— y utilizarla como base para planificar y generar campañas de marketing digital multicanal, todo con inteligencia artificial ejecutándose localmente en la computadora del usuario, sin dependencia de servicios en la nube.
+SmartRedes es un plugin para [Pinokio](https://pinokio.computer) que permite a las pequeñas y medianas empresas construir una identidad de marca estructurada —denominada **ADN empresarial**— y utilizarla como base para planificar y generar campañas de marketing digital multicanal, todo con inteligencia artificial ejecutándose localmente en la computadora del usuario, sin dependencia de servicios en la nube.
 
 ---
 
@@ -27,7 +27,7 @@ CCS Brand Assistant es un plugin para [Pinokio](https://pinokio.computer) que pe
 ## Arquitectura
 
 ```
-ccs-brand-assistant/
+smartredes/
 ├── pinokio.js          # Configuración y menú dinámico del plugin
 ├── install.json        # Instalación con 1 click (Ollama + venv + deps)
 ├── start.json          # Inicio del servidor como daemon

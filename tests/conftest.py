@@ -1,5 +1,5 @@
 """
-Configuración de pytest para CCS Brand Assistant.
+Configuración de pytest para SmartRedes.
 """
 import sys
 import os
@@ -13,14 +13,14 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "server"))
 
 # Usar directorio temporal para DATA_DIR durante tests
-TEST_DATA_DIR = Path(tempfile.mkdtemp(prefix="ccs_test_"))
+TEST_DATA_DIR = Path(tempfile.mkdtemp(prefix="smartredes_test_"))
 
 
 @pytest.fixture(autouse=True)
 def setup_test_env(monkeypatch, tmp_path):
     """Configura variables de entorno para tests."""
     # Usar un directorio temporal para datos
-    monkeypatch.setenv("CCS_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("SMARTREDES_DATA_DIR", str(tmp_path))
 
     # Mock de Ollama para que no necesite estar corriendo
     with patch("app.OLLAMA_URL", "http://localhost:11434"):

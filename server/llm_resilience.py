@@ -1,5 +1,5 @@
 """
-CCS Brand Assistant — Módulo de Resiliencia para Llamadas LLM
+SmartRedes — Módulo de Resiliencia para Llamadas LLM
 =============================================================
 
 Implementa reintentos inteligentes, rotación de sesiones y recuperación
@@ -29,7 +29,7 @@ from context_manager import (
     MAX_CONSECUTIVE_ERRORS,
 )
 
-logger = logging.getLogger("ccs-brand-assistant.resilience")
+logger = logging.getLogger("smartredes.resilience")
 
 # ---------------------------------------------------------------------------
 # Configuración de reintentos

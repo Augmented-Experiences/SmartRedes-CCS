@@ -1,4 +1,4 @@
-# Changelog — CCS Brand Assistant v2.0
+# Changelog — SmartRedes v2.0
 
 ## Resumen de Reparaciones y Mejoras
 

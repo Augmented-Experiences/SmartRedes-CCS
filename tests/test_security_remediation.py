@@ -1,5 +1,5 @@
 """
-Tests de remediación de seguridad para CCS Brand Assistant.
+Tests de remediación de seguridad para SmartRedes.
 
 Verifica que todas las falencias reportadas en el análisis de seguridad
 han sido corregidas correctamente.
@@ -38,7 +38,7 @@ class TestCampaignLookupIDOR:
 
     def setup_method(self, method):
         """Crea un directorio temporal con campañas de prueba."""
-        self.tmp_dir = Path(tempfile.mkdtemp(prefix="ccs_test_idor_"))
+        self.tmp_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_idor_"))
         self.campaigns_dir = self.tmp_dir / "campaigns"
         self.campaigns_dir.mkdir(parents=True)
 
@@ -99,7 +99,7 @@ class TestCampaignLookupIDOR:
 
     def test_empty_campaigns_dir(self):
         """Si no hay campañas, debe retornar None sin error."""
-        empty_dir = Path(tempfile.mkdtemp(prefix="ccs_test_empty_"))
+        empty_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_empty_"))
         (empty_dir / "campaigns").mkdir()
         with patch("app.DATA_DIR", empty_dir):
             from app import _find_campaign_dir
@@ -110,7 +110,7 @@ class TestCampaignLookupIDOR:
 
     def test_no_campaigns_dir(self):
         """Si el directorio campaigns no existe, debe retornar None."""
-        empty_dir = Path(tempfile.mkdtemp(prefix="ccs_test_nodir_"))
+        empty_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_nodir_"))
         with patch("app.DATA_DIR", empty_dir):
             from app import _find_campaign_dir
             result = _find_campaign_dir("any-id")
@@ -129,7 +129,7 @@ class TestSVGRejection:
     @pytest.fixture
     def client(self):
         """Crea un cliente de test de FastAPI."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": tempfile.mkdtemp()}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": tempfile.mkdtemp()}):
             from app import app
             from fastapi.testclient import TestClient
             return TestClient(app)
@@ -177,7 +177,7 @@ class TestUploadSizeLimit:
     @pytest.fixture
     def client(self):
         """Crea un cliente de test de FastAPI."""
-        with patch.dict(os.environ, {"CCS_DATA_DIR": tempfile.mkdtemp()}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": tempfile.mkdtemp()}):
             from app import app
             from fastapi.testclient import TestClient
             return TestClient(app)
@@ -343,7 +343,7 @@ class TestImportSizeLimit:
     def client(self):
         """Crea un cliente de test de FastAPI."""
         tmp = tempfile.mkdtemp()
-        with patch.dict(os.environ, {"CCS_DATA_DIR": tmp}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": tmp}):
             from app import app
             from fastapi.testclient import TestClient
             return TestClient(app)
@@ -380,7 +380,7 @@ class TestHealthCheck:
     def client(self):
         """Crea un cliente de test de FastAPI."""
         tmp = tempfile.mkdtemp()
-        with patch.dict(os.environ, {"CCS_DATA_DIR": tmp}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": tmp}):
             from app import app
             from fastapi.testclient import TestClient
             return TestClient(app)
@@ -449,7 +449,7 @@ class TestLoggingConfiguration:
         """El logger debe tener un RotatingFileHandler configurado."""
         from logging.handlers import RotatingFileHandler
         import logging
-        logger = logging.getLogger("css-brand-assistant")
+        logger = logging.getLogger("smartredes")
         # Verificar que existe al menos un handler de archivo rotativo
         # (puede no existir si el directorio no es escribible en CI)
         has_rotating = any(
@@ -471,7 +471,7 @@ class TestURLValidation:
     def client(self):
         """Crea un cliente de test de FastAPI."""
         tmp = tempfile.mkdtemp()
-        with patch.dict(os.environ, {"CCS_DATA_DIR": tmp}):
+        with patch.dict(os.environ, {"SMARTREDES_DATA_DIR": tmp}):
             from app import app
             from fastapi.testclient import TestClient
             return TestClient(app)
@@ -513,7 +513,7 @@ class TestCampaignDirEdgeCases:
 
     def setup_method(self, method):
         """Crea directorios de prueba."""
-        self.tmp_dir = Path(tempfile.mkdtemp(prefix="ccs_test_edge_"))
+        self.tmp_dir = Path(tempfile.mkdtemp(prefix="smartredes_test_edge_"))
         self.campaigns_dir = self.tmp_dir / "campaigns"
         self.campaigns_dir.mkdir(parents=True)
 

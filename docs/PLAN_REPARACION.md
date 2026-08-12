@@ -1,4 +1,4 @@
-# Plan de Reparación y Mejoras: CCS Brand Assistant
+# Plan de Reparación y Mejoras: SmartRedes
 
 ## 1. Corrección de Error Crítico de Arranque
 **Problema:** Error `Windows cannot find '{{input.event[0]}}/ui/index.html'` al iniciar el plugin.

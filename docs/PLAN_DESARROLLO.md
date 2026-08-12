@@ -1,4 +1,4 @@
-# Plan de Desarrollo Detallado — CSS Brand Assistant
+# Plan de Desarrollo Detallado — SmartRedes
 
 **Versión:** 0.1.0  
 **Fecha:** Marzo 2025  
@@ -8,7 +8,7 @@
 
 ## 1. Visión del producto
 
-CSS Brand Assistant es un plugin de Pinokio que permite a las PYMEs construir y operar una máquina de marketing asistida por inteligencia artificial completamente local. El diferenciador central no es la generación de contenido en volumen, sino la **coherencia estratégica**: todo el contenido nace de un perfil estructurado de identidad de marca —el ADN empresarial— que el sistema construye, versiona y utiliza como fuente de verdad para todas las piezas posteriores.
+SmartRedes es un plugin de Pinokio que permite a las PYMEs construir y operar una máquina de marketing asistida por inteligencia artificial completamente local. El diferenciador central no es la generación de contenido en volumen, sino la **coherencia estratégica**: todo el contenido nace de un perfil estructurado de identidad de marca —el ADN empresarial— que el sistema construye, versiona y utiliza como fuente de verdad para todas las piezas posteriores.
 
 El sistema opera sobre cuatro pilares funcionales que se ejecutan en secuencia: descubrimiento de marca, construcción del ADN, planificación de campañas y producción de contenido. Cada pilar tiene su propio agente especializado con prompts configurables y trazabilidad completa.
 

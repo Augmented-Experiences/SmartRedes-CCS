@@ -5,7 +5,7 @@
 # ============================================================
 
 Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host "  CCS Brand Assistant — Diagnostico Windows  " -ForegroundColor Cyan
+Write-Host "  SmartRedes — Diagnostico Windows  " -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host ""
 

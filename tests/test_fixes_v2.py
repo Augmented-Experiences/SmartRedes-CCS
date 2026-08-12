@@ -1,5 +1,5 @@
 """
-Tests para las correcciones v2 — CCS Brand Assistant
+Tests para las correcciones v2 — SmartRedes
 =====================================================
 Suite de tests que valida las 5 correcciones + protección contra inyección de prompts.
 

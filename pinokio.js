@@ -1,5 +1,5 @@
 /**
- * CCS Brand Assistant — Configuración de Plugin Pinokio
+ * SmartRedes — Configuración de Plugin Pinokio
  *
  * Menú dinámico según estado del plugin:
  *   - No instalado: botón de instalación
@@ -11,7 +11,7 @@
  * Se accede via kernel.memory.local para el botón "Abrir UI".
  */
 module.exports = {
-  title: "CCS Brand Assistant",
+  title: "SmartRedes",
   description: "Plataforma de ADN de marca y campañas digitales con IA local para PYMEs — Cámara de Comercio de Santiago",
   icon: "icon.png",
 

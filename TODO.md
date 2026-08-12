@@ -1,4 +1,4 @@
-# Plan de Reparación - CCS Brand Assistant
+# Plan de Reparación - SmartRedes
 
 ## Estado: ✅ COMPLETADO
 

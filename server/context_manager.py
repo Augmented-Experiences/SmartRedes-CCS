@@ -1,5 +1,5 @@
 """
-CCS Brand Assistant — Módulo de Gestión de Contexto LLM
+SmartRedes — Módulo de Gestión de Contexto LLM
 =======================================================
 
 Este módulo implementa gestión robusta del contexto para llamadas al LLM local (Ollama),
@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 
-logger = logging.getLogger("ccs-brand-assistant.context")
+logger = logging.getLogger("smartredes.context")
 
 # ---------------------------------------------------------------------------
 # Configuración de límites de contexto por modelo
