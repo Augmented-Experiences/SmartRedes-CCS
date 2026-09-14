@@ -72,7 +72,7 @@ module.exports = {
     {
       method: "log",
       params: {
-        html: "<div style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:16px 20px 0'><div style='background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:16px 18px'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:28px;height:28px;border-radius:50%;background:#06b6d4;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;flex-shrink:0'>4</div><span style='color:#e2e8f0;font-size:14px;font-weight:600'>Instalando dependencias Python</span></div><p style='color:#94a3b8;font-size:12px;margin:0'>Entorno virtual + FastAPI + Playwright (scraper)...</p></div></div>"
+        html: "<div style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:16px 20px 0'><div style='background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:16px 18px'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:28px;height:28px;border-radius:50%;background:#06b6d4;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;flex-shrink:0'>4</div><span style='color:#e2e8f0;font-size:14px;font-weight:600'>Instalando dependencias Python</span></div><p style='color:#94a3b8;font-size:12px;margin:0'>Entorno virtual + FastAPI + Torch + Diffusers + Playwright...</p></div></div>"
       }
     },
     {
@@ -86,11 +86,20 @@ module.exports = {
       }
     },
     {
+      method: "script.start",
+      params: {
+        uri: "torch.js",
+        params: {
+          venv: "venv"
+        }
+      }
+    },
+    {
       method: "shell.run",
       params: {
         venv: "venv",
         message: [
-          "pip install playwright",
+          "pip install playwright diffusers transformers accelerate safetensors",
           "playwright install chromium"
         ]
       }
@@ -126,7 +135,7 @@ module.exports = {
       method: "fs.write",
       params: {
         path: "data/config.json",
-        text: "{{JSON.stringify({version:'1.0.0',installedAt:new Date().toISOString(),platform:platform,ram:ram,default_model:'llama3.1:8b'},null,2)}}"
+        text: "{{JSON.stringify({version:'0.3.0',installedAt:new Date().toISOString(),platform:platform,ram:ram,default_model:'llama3.1:8b',image_provider:'auto',diffusion_model:'SimianLuo/LCM_Dreamshaper_v7',diffusion_steps:4},null,2)}}"
       }
     },
 

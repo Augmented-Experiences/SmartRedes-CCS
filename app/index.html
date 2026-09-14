@@ -3464,9 +3464,10 @@ function renderPubEditor(pub) {
   html += '<input type="text" id="editPubHashtags" value="' + escapeHtml(hashtags) + '" oninput="updatePreviewHashtags()" /></div>';
   html += '<div class="form-group"><label>CTA (Llamada a la acción)</label>';
   html += '<input type="text" id="editPubCTA" value="' + escapeHtml(pub.cta || '') + '" /></div>';
-  html += '<input type="hidden" id="editPubImagePrompt" value="' + escapeHtml(pub.image_prompt || '') + '" />';
+  html += '<div class="form-group"><label>Prompt de imagen</label>';
+  html += '<textarea id="editPubImagePrompt" style="min-height:60px">' + escapeHtml(pub.image_prompt || '') + '</textarea></div>';
 
-  // ── Sección de generación con IA (solo texto; SmartRedes sin generación de imágenes) ──
+  // ── Sección de generación con IA (texto e imagen separados) ──
   html += '<div style="background:var(--bg-base);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">';
   html += '<div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:12px">🤖 Generación con IA</div>';
 
@@ -3519,7 +3520,32 @@ function renderPubEditor(pub) {
   }
   html += '</div>';
 
-  // Carga manual de imagen (sin generación por IA)
+  // Prompt de imagen visible y editable
+  html += '<div style="margin-bottom:10px">';
+  html += '<label style="font-size:11px;color:var(--text-muted)">Prompt de imagen (editable)</label>';
+  html += '<textarea id="editPubImagePromptInline" style="min-height:60px;font-size:12px" placeholder="Describe la imagen que quieres para usar en herramientas externas...">' + escapeHtml(pub.image_prompt || '') + '</textarea>';
+  html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Este prompt tambi\u00e9n se actualiza en el campo &quot;Prompt de imagen&quot; de arriba.</div>';
+  html += '</div>';
+
+  // Bot\u00f3n de prompt para herramienta externa
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">';
+  html += '<button class="btn btn-sm" id="btnExternalPrompt" onclick="generateExternalPrompt()" style="flex:1;min-width:140px;background:linear-gradient(135deg,var(--ccs-verde),var(--ccs-verde-brillante));color:#fff;border:none" title="Genera un prompt optimizado para Nano Banana, Midjourney, DALL-E u otros generadores externos">';
+  html += '🌐 Generar prompt para herramienta externa</button>';
+  html += '</div>';
+
+  // Panel resultado prompt externo (oculto por defecto)
+  html += '<div id="externalPromptPanel" style="display:none;background:#f0faf4;border:1px solid rgba(61,174,43,0.3);border-radius:8px;padding:10px;margin-bottom:8px">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+  html += '<span style="font-size:11px;font-weight:700;color:var(--ccs-verde)">🌐 Prompt para herramienta externa</span>';
+  html += '<div style="display:flex;gap:4px">';
+  html += '<button class="btn btn-sm" onclick="copyExternalPrompt()" style="font-size:10px;padding:2px 8px;background:var(--ccs-verde);color:#fff;border:none">📋 Copiar</button>';
+  html += '<button class="btn btn-sm" onclick="document.getElementById(\'externalPromptPanel\').style.display=\'none\'" style="font-size:10px;padding:2px 8px">✕</button>';
+  html += '</div></div>';
+  html += '<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">Compatible con: Nano Banana, Midjourney, DALL-E 3, Stable Diffusion, Adobe Firefly</div>';
+  html += '<textarea id="externalPromptText" style="min-height:80px;font-size:11px;background:#fff;border:1px solid rgba(61,174,43,0.3)" readonly placeholder="El prompt generado aparecer\u00e1 aqu\u00ed..."></textarea>';
+  html += '</div>';
+
+  // Botones de imagen: solo cargar desde disco
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
   html += '<label class="btn btn-primary btn-sm" style="cursor:pointer;margin:0;flex:1;min-width:140px;text-align:center" title="Cargar imagen desde tu computadora">';
   html += '📂 Cargar imagen desde disco';
@@ -3534,6 +3560,14 @@ function renderPubEditor(pub) {
   // Cargar modelos de texto en background e inicializar zona de imagen
   setTimeout(function() {
     _loadTextModels();
+    // Sincronizar prompt inline con el campo principal
+    var inlinePrompt = document.getElementById('editPubImagePromptInline');
+    var mainPrompt = document.getElementById('editPubImagePrompt');
+    if (inlinePrompt && mainPrompt) {
+      inlinePrompt.addEventListener('input', function() { mainPrompt.value = inlinePrompt.value; });
+      mainPrompt.addEventListener('input', function() { inlinePrompt.value = mainPrompt.value; });
+    }
+    // Inicializar zona de paste/drop para imagen
     _initImageDropZone(pub.id, state.activeCampaign ? state.activeCampaign.id : '');
   }, 100);
 
@@ -3654,14 +3688,88 @@ function generateImageWithAI(pubId) {
 /* Funciones de generación local de imágenes removidas - se usa herramienta externa + carga manual */
 
 function enhanceImagePromptWithAI() {
-  showNotification('SmartRedes no incluye generación ni mejora de prompts de imagen.', 'info');
+  // Obtener el canal de la publicación actual
+  var pubChannel = '';
+  var editorContent = document.getElementById('pubEditorContent');
+  if (editorContent) pubChannel = editorContent.getAttribute('data-pub-channel') || '';
+  // Función desactivada - redirigir a prompt externo
+  showNotification('La mejora de prompts con IA local ha sido desactivada. Usa "Generar prompt para herramienta externa" en su lugar.', 'info');
+  // Nota: cuando se reactive, enviar channel: pubChannel en el body del fetch
 }
 
+/**
+ * Genera un prompt optimizado para herramientas externas de generación de imágenes:
+ * Nano Banana, Midjourney, DALL-E 3, Stable Diffusion, Adobe Firefly, etc.
+ * El prompt resultante sigue las convenciones de cada herramienta (descriptivo, con estilos, pesos, etc.)
+ */
 function generateExternalPrompt() {
-  showNotification('SmartRedes no incluye prompts para generadores de imagen externos.', 'info');
+  var promptEl = document.getElementById('editPubImagePromptInline') || document.getElementById('editPubImagePrompt');
+  var currentPrompt = promptEl ? promptEl.value.trim() : '';
+
+  // Obtener contexto de la publicación actual
+  var pubText = (document.getElementById('editPubText') || {}).value || '';
+  var hashtags = (document.getElementById('editPubHashtags') || {}).value || '';
+
+  if (!currentPrompt && !pubText) {
+    showNotification('Escribe un prompt o texto del post antes de generar', 'error');
+    return;
+  }
+
+  var btn = document.getElementById('btnExternalPrompt');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading-spinner"></span> Generando...'; }
+
+  // Obtener el canal de la publicación actual
+  var pubChannel = '';
+  var editorContent = document.getElementById('pubEditorContent');
+  if (editorContent) pubChannel = editorContent.getAttribute('data-pub-channel') || '';
+
+  fetch(apiUrl('/image-prompt/external'), {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json; charset=utf-8'},
+    body: JSON.stringify({
+      prompt: currentPrompt,
+      post_text: pubText,
+      hashtags: hashtags,
+      channel: pubChannel,
+    }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (btn) { btn.disabled = false; btn.innerHTML = '🌐 Prompt para herramienta externa'; }
+      if (data.external_prompt) {
+        var panel = document.getElementById('externalPromptPanel');
+        var textArea = document.getElementById('externalPromptText');
+        if (textArea) textArea.value = data.external_prompt;
+        if (panel) panel.style.display = 'block';
+        showNotification('🌐 Prompt externo generado. ¡Listo para copiar!', 'success');
+      } else {
+        showNotification('Error al generar prompt externo: ' + (data.detail || 'Sin respuesta'), 'error');
+      }
+    })
+    .catch(function(e) {
+      if (btn) { btn.disabled = false; btn.innerHTML = '🌐 Prompt para herramienta externa'; }
+      showNotification('Error: ' + e.message, 'error');
+    });
 }
 
-function copyExternalPrompt() {}
+/**
+ * Copia el prompt externo generado al portapapeles.
+ */
+function copyExternalPrompt() {
+  var textArea = document.getElementById('externalPromptText');
+  if (!textArea || !textArea.value) {
+    showNotification('No hay prompt para copiar', 'error');
+    return;
+  }
+  navigator.clipboard.writeText(textArea.value)
+    .then(function() { showNotification('📋 Prompt copiado al portapapeles', 'success'); })
+    .catch(function() {
+      // Fallback para navegadores sin clipboard API
+      textArea.select();
+      document.execCommand('copy');
+      showNotification('📋 Prompt copiado', 'success');
+    });
+}
 
 // generateWithAI: compatibilidad con código anterior (solo texto)
 function generateWithAI(pubId) {

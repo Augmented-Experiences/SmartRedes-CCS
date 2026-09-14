@@ -22,7 +22,7 @@ module.exports = {
         message: [
           "pip install --upgrade pip",
           "pip install -r requirements-core.txt",
-          "pip install playwright"
+          "pip install playwright diffusers transformers accelerate safetensors"
         ]
       }
     },

@@ -116,23 +116,45 @@ OLLAMA_TIMEOUT_CAMPAIGN: int = int(os.environ.get("OLLAMA_TIMEOUT_CAMPAIGN", 600
 # Timeout para análisis de ADN de marca
 OLLAMA_TIMEOUT_ADN: int = int(os.environ.get("OLLAMA_TIMEOUT_ADN", 300))       # 5 min
 
-# SmartRedes no incluye generación de imágenes por IA (solo carga manual de assets).
-IMAGE_ENGINE_AVAILABLE = False
-DEFAULT_DIFFUSION_MODEL = ""
+# ---------------------------------------------------------------------------
+# Proveedores de generación de imágenes
+# Se pueden configurar via variables de entorno o config.json
+# Proveedores soportados: "ollama" | "automatic1111" | "comfyui" | "auto"
+# - "auto": prueba en orden Ollama → A1111 → ComfyUI → placeholder SVG
+# - "ollama": solo Ollama (macOS/Linux)
+# - "automatic1111": AUTOMATIC1111 WebUI (http://localhost:7860/sdapi/v1/txt2img)
+# - "comfyui": ComfyUI (http://localhost:8188)
+# ---------------------------------------------------------------------------
+IMAGE_PROVIDER: str = os.environ.get("IMAGE_PROVIDER", "auto")
+A1111_URL: str = os.environ.get("A1111_URL", "http://localhost:7860")
+COMFYUI_URL: str = os.environ.get("COMFYUI_URL", "http://localhost:8188")
+IMAGE_TIMEOUT: int = int(os.environ.get("IMAGE_TIMEOUT", 300))  # 5 min
 
-
-def _reject_image_generation():
-    raise HTTPException(
-        status_code=404,
-        detail="SmartRedes no incluye generación de imágenes por IA.",
+# ---------------------------------------------------------------------------
+# Motor de imagen embebido (HuggingFace Diffusers + LCM)
+# Permite generar imágenes localmente sin depender de Ollama, A1111 ni ComfyUI.
+# El motor se carga en background al primer uso o al iniciar el servidor.
+# ---------------------------------------------------------------------------
+try:
+    from image_engine import (
+        generate_image as _engine_generate,
+        load_engine_async as _engine_load_async,
+        get_engine_status as _engine_get_status,
+        is_engine_ready as _engine_is_ready,
+        unload_engine as _engine_unload,
+        list_available_models as _engine_list_models,
+        DEFAULT_DIFFUSION_MODEL,
     )
-
-
-# Constantes legacy (rutas de generación deshabilitadas; evitan NameError en código no alcanzable).
-IMAGE_PROVIDER = "disabled"
-A1111_URL = "http://localhost:7860"
-COMFYUI_URL = "http://localhost:8188"
-IMAGE_TIMEOUT = 300
+    IMAGE_ENGINE_AVAILABLE = True
+    logger_tmp = logging.getLogger("css-brand-assistant")
+    logger_tmp.info("Motor de imagen embebido (Diffusers) disponible")
+except ImportError as _ie:
+    IMAGE_ENGINE_AVAILABLE = False
+    DEFAULT_DIFFUSION_MODEL = "SimianLuo/LCM_Dreamshaper_v7"
+    logging.getLogger("css-brand-assistant").warning(
+        f"Motor de imagen embebido no disponible: {_ie}. "
+        "Instala: pip install torch diffusers transformers accelerate safetensors"
+    )
 
 # ---------------------------------------------------------------------------
 # Estado global de descargas de modelos en progreso
@@ -3658,14 +3680,16 @@ def _ensure_model_available(model: str) -> dict:
 
 
 def _get_image_provider_config() -> dict:
-    """SmartRedes: generación de imágenes deshabilitada (solo carga manual)."""
+    """Retorna la configuración del proveedor de imágenes desde config.json o env vars."""
+    cfg = load_json(DATA_DIR / "config.json", {})
     return {
-        "provider": "disabled",
-        "a1111_url": "http://localhost:7860",
-        "comfyui_url": "http://localhost:8188",
-        "timeout": 300,
-        "diffusion_model": "",
-        "diffusion_steps": 0,
+        "provider": cfg.get("image_provider", IMAGE_PROVIDER),
+        "a1111_url": cfg.get("a1111_url", A1111_URL),
+        "comfyui_url": cfg.get("comfyui_url", COMFYUI_URL),
+        "timeout": int(cfg.get("image_timeout", IMAGE_TIMEOUT)),
+        # Modelo y pasos del motor embebido (Diffusers/LCM)
+        "diffusion_model": cfg.get("diffusion_model", DEFAULT_DIFFUSION_MODEL),
+        "diffusion_steps": int(cfg.get("diffusion_steps", 4)),
     }
 
 
@@ -3899,8 +3923,18 @@ def _generate_placeholder_svg(prompt: str, model: str) -> str:
 
 @app.post("/api/campaigns/{campaign_id}/publications/{pub_id}/generate-image")
 async def generate_publication_image(campaign_id: str, pub_id: str, req: GenerateImageRequest):
-    """Genera una imagen para la publicación (deshabilitado en SmartRedes)."""
-    _reject_image_generation()
+    """Genera una imagen para la publicación.
+
+    Estrategia multi-proveedor (configurable via IMAGE_PROVIDER en config.json o env var):
+    - "auto" (defecto): prueba en orden Ollama → A1111 → ComfyUI → placeholder SVG
+    - "ollama": solo Ollama (macOS/Linux, experimental)
+    - "automatic1111": AUTOMATIC1111 WebUI con --api flag
+    - "comfyui": ComfyUI local
+
+    En Windows, Ollama no soporta generación de imágenes. Si AUTOMATIC1111 o ComfyUI
+    están instalados, se usan automáticamente. Si ninguno está disponible, se genera
+    un placeholder SVG profesional que el usuario puede reemplazar manualmente.
+    """
     import time, base64
     start = time.time()
 
@@ -4213,8 +4247,9 @@ def list_generated_images():
 
 @app.get("/api/image-providers/status")
 def get_image_providers_status():
-    """Proveedores de generación de imágenes (deshabilitado en SmartRedes)."""
-    _reject_image_generation()
+    """Retorna el estado de disponibilidad de cada proveedor de imágenes.
+    Permite al frontend mostrar qué proveedores están disponibles y cuál se usará.
+    """
     img_cfg = _get_image_provider_config()
     provider = img_cfg["provider"]
 
@@ -4796,8 +4831,17 @@ def _get_aspect_ratio_info(channel: str) -> dict:
 
 @app.post("/api/image-prompt/enhance")
 async def enhance_image_prompt(req: ImagePromptEnhanceRequest):
-    """Mejora de prompts de imagen deshabilitada en SmartRedes."""
-    _reject_image_generation()
+    """Mejora un prompt de imagen usando el LLM local (Ollama).
+
+    Toma un prompt simple y lo enriquece con:
+    - Detalles de composición y encuadre
+    - Iluminación y paleta de colores
+    - Estilo artístico y técnica
+    - Calidad y resolución
+    - Elementos negativos a evitar
+
+    Retorna: { enhanced_prompt: str, original_prompt: str }
+    """
     if not req.prompt or not req.prompt.strip():
         raise HTTPException(status_code=400, detail="El prompt no puede estar vacío")
 
@@ -4878,8 +4922,24 @@ RESPONDE SOLO CON EL PROMPT MEJORADO, sin prefijos como "Prompt:" ni comillas.""
 
 @app.post("/api/image-prompt/external")
 async def generate_external_image_prompt(req: ImagePromptExternalRequest):
-    """Prompts para generadores externos deshabilitados en SmartRedes."""
-    _reject_image_generation()
+    """Genera un prompt optimizado para herramientas externas de generación de imágenes.
+
+    Compatible con:
+    - Nano Banana (nano-banana.com)
+    - Midjourney
+    - DALL-E 3 (ChatGPT)
+    - Stable Diffusion (Automatic1111, ComfyUI)
+    - Adobe Firefly
+    - Leonardo AI
+
+    El prompt generado sigue las convenciones de estas herramientas:
+    - Descripción visual detallada
+    - Estilo artístico explícito
+    - Parámetros de calidad
+    - Aspectos técnicos (ratio, calidad, versión)
+
+    Retorna: { external_prompt: str, tools: list }
+    """
     base_prompt = (req.prompt or "").strip()
     post_text = (req.post_text or "").strip()
     hashtags = (req.hashtags or "").strip()
