@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CCS Brand Assistant — Cámara de Comercio de Santiago</title>
+  <title>SmartRedes — CCCE · IA local para PYMEs</title>
   <style>
     /* ===== FUENTES CCS ===== */
     @font-face {
@@ -66,22 +66,29 @@
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      /* === Paleta CCS 2025 === */
-      /* Primarios */
-      --ccs-azul-oscuro:   #0D3DA6;
-      --ccs-verde:         #3DAE2B;
-      /* Secundarios */
-      --ccs-azul:          #0D56CA;
-      --ccs-celeste:       #3A6DDE;
-      --ccs-verde-brillante: #0DD700;
+      /* === Paleta CCCE (SmartSuite) === */
+      --ccce-azul-oscuro: #173A7A;
+      --ccce-verde: #3DAE2B;
+      --ccce-azul: #1E56A8;
+      --ccce-celeste: #2E6FC0;
+      --ccce-verde-brillante: #0DD700;
+      --ccce-rojo: #CE1126;
+      --ccce-dorado: #F4C10E;
+      --ccce-accent: #0FB5A6;
+      /* Alias legacy en esta UI */
+      --ccs-azul-oscuro: var(--ccce-azul-oscuro);
+      --ccs-verde: var(--ccce-verde);
+      --ccs-azul: var(--ccce-azul);
+      --ccs-celeste: var(--ccce-celeste);
+      --ccs-verde-brillante: var(--ccce-verde-brillante);
 
       /* === Variables de UI (tema claro) === */
       --bg-base:    #F7F8FA;
       --bg-card:    #FFFFFF;
       --bg-hover:   #EEF2F8;
-      --primary:    #0D3DA6;
-      --primary-h:  #0D56CA;
-      --accent:     #3A6DDE;
+      --primary:    var(--ccce-azul-oscuro);
+      --primary-h:  var(--ccce-azul);
+      --accent:     var(--ccce-accent);
       --success:    #3DAE2B;
       --success-h:  #0DD700;
       --warning:    #f59e0b;
@@ -89,7 +96,7 @@
       --text-main:  #1A2340;
       --text-muted: #6B7A99;
       --border:     #D6DFF0;
-      --border-focus: #0D56CA;
+      --border-focus: var(--ccce-celeste);
       --radius:     10px;
       --sidebar-w:  252px;
 
@@ -147,7 +154,8 @@
       align-items: center;
       gap: 10px;
       padding: 16px 14px 14px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 3px solid transparent;
+      border-image: linear-gradient(90deg, var(--ccce-azul-oscuro) 0 33%, var(--ccce-rojo) 33% 66%, var(--ccce-dorado) 66% 100%) 1;
       background: #FFFFFF;
     }
     /* Logo CCS discreto en el sidebar */
@@ -159,10 +167,11 @@
       flex-shrink: 0;
     }
     .sidebar-logo-divider {
-      width: 1px;
+      width: 2px;
       height: 28px;
-      background: var(--border);
+      background: var(--ccce-accent);
       flex-shrink: 0;
+      border-radius: 2px;
     }
     .sidebar-logo-text {
       font-size: 11px;
@@ -200,11 +209,12 @@
       transition: all 0.15s;
       margin-bottom: 2px;
     }
-    .nav-item:hover { background: var(--bg-hover); color: var(--primary); }
+    .nav-item:hover { background: rgba(15,181,166,0.12); color: var(--ccce-azul-oscuro); }
     .nav-item.active {
-      background: linear-gradient(135deg, var(--ccs-azul-oscuro), var(--ccs-azul));
+      background: linear-gradient(135deg, var(--ccce-accent), #0a9a8e);
       color: #fff;
-      box-shadow: 0 2px 8px rgba(13,61,166,0.25);
+      font-weight: 700;
+      box-shadow: inset 3px 0 0 var(--ccce-rojo), 0 2px 8px rgba(15,181,166,0.35);
     }
     .nav-item .nav-icon { width: 18px; text-align: center; font-size: 14px; }
     .nav-badge {
@@ -974,11 +984,11 @@
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <!-- Logo CCS discreto -->
-      <img src="logo-ccs.svg" alt="Cámara de Comercio de Santiago" class="sidebar-logo-img" onerror="this.src='icon.png'" />
+      <img src="logo-ccce.png" alt="SmartRedes — CCCE" class="sidebar-logo-img" onerror="this.src='icon.png'" />
       <div class="sidebar-logo-divider"></div>
       <div>
-        <div class="sidebar-logo-text">Brand Assistant</div>
-        <div class="sidebar-logo-sub">IA local para PYMEs</div>
+        <div class="sidebar-logo-text">SmartRedes</div>
+        <div class="sidebar-logo-sub">CCCE · IA local para PYMEs</div>
       </div>
     </div>
 
@@ -3454,10 +3464,9 @@ function renderPubEditor(pub) {
   html += '<input type="text" id="editPubHashtags" value="' + escapeHtml(hashtags) + '" oninput="updatePreviewHashtags()" /></div>';
   html += '<div class="form-group"><label>CTA (Llamada a la acción)</label>';
   html += '<input type="text" id="editPubCTA" value="' + escapeHtml(pub.cta || '') + '" /></div>';
-  html += '<div class="form-group"><label>Prompt de imagen</label>';
-  html += '<textarea id="editPubImagePrompt" style="min-height:60px">' + escapeHtml(pub.image_prompt || '') + '</textarea></div>';
+  html += '<input type="hidden" id="editPubImagePrompt" value="' + escapeHtml(pub.image_prompt || '') + '" />';
 
-  // ── Sección de generación con IA (texto e imagen separados) ──
+  // ── Sección de generación con IA (solo texto; SmartRedes sin generación de imágenes) ──
   html += '<div style="background:var(--bg-base);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">';
   html += '<div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:12px">🤖 Generación con IA</div>';
 
@@ -3510,32 +3519,7 @@ function renderPubEditor(pub) {
   }
   html += '</div>';
 
-  // Prompt de imagen visible y editable
-  html += '<div style="margin-bottom:10px">';
-  html += '<label style="font-size:11px;color:var(--text-muted)">Prompt de imagen (editable)</label>';
-  html += '<textarea id="editPubImagePromptInline" style="min-height:60px;font-size:12px" placeholder="Describe la imagen que quieres para usar en herramientas externas...">' + escapeHtml(pub.image_prompt || '') + '</textarea>';
-  html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Este prompt tambi\u00e9n se actualiza en el campo &quot;Prompt de imagen&quot; de arriba.</div>';
-  html += '</div>';
-
-  // Bot\u00f3n de prompt para herramienta externa
-  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">';
-  html += '<button class="btn btn-sm" id="btnExternalPrompt" onclick="generateExternalPrompt()" style="flex:1;min-width:140px;background:linear-gradient(135deg,var(--ccs-verde),var(--ccs-verde-brillante));color:#fff;border:none" title="Genera un prompt optimizado para Nano Banana, Midjourney, DALL-E u otros generadores externos">';
-  html += '🌐 Generar prompt para herramienta externa</button>';
-  html += '</div>';
-
-  // Panel resultado prompt externo (oculto por defecto)
-  html += '<div id="externalPromptPanel" style="display:none;background:#f0faf4;border:1px solid rgba(61,174,43,0.3);border-radius:8px;padding:10px;margin-bottom:8px">';
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
-  html += '<span style="font-size:11px;font-weight:700;color:var(--ccs-verde)">🌐 Prompt para herramienta externa</span>';
-  html += '<div style="display:flex;gap:4px">';
-  html += '<button class="btn btn-sm" onclick="copyExternalPrompt()" style="font-size:10px;padding:2px 8px;background:var(--ccs-verde);color:#fff;border:none">📋 Copiar</button>';
-  html += '<button class="btn btn-sm" onclick="document.getElementById(\'externalPromptPanel\').style.display=\'none\'" style="font-size:10px;padding:2px 8px">✕</button>';
-  html += '</div></div>';
-  html += '<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">Compatible con: Nano Banana, Midjourney, DALL-E 3, Stable Diffusion, Adobe Firefly</div>';
-  html += '<textarea id="externalPromptText" style="min-height:80px;font-size:11px;background:#fff;border:1px solid rgba(61,174,43,0.3)" readonly placeholder="El prompt generado aparecer\u00e1 aqu\u00ed..."></textarea>';
-  html += '</div>';
-
-  // Botones de imagen: solo cargar desde disco
+  // Carga manual de imagen (sin generación por IA)
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
   html += '<label class="btn btn-primary btn-sm" style="cursor:pointer;margin:0;flex:1;min-width:140px;text-align:center" title="Cargar imagen desde tu computadora">';
   html += '📂 Cargar imagen desde disco';
@@ -3550,14 +3534,6 @@ function renderPubEditor(pub) {
   // Cargar modelos de texto en background e inicializar zona de imagen
   setTimeout(function() {
     _loadTextModels();
-    // Sincronizar prompt inline con el campo principal
-    var inlinePrompt = document.getElementById('editPubImagePromptInline');
-    var mainPrompt = document.getElementById('editPubImagePrompt');
-    if (inlinePrompt && mainPrompt) {
-      inlinePrompt.addEventListener('input', function() { mainPrompt.value = inlinePrompt.value; });
-      mainPrompt.addEventListener('input', function() { inlinePrompt.value = mainPrompt.value; });
-    }
-    // Inicializar zona de paste/drop para imagen
     _initImageDropZone(pub.id, state.activeCampaign ? state.activeCampaign.id : '');
   }, 100);
 
@@ -3677,93 +3653,15 @@ function generateImageWithAI(pubId) {
 
 /* Funciones de generación local de imágenes removidas - se usa herramienta externa + carga manual */
 
-/**
- * Mejora el prompt de imagen actual usando Ollama para obtener mejores resultados.
- * Toma el prompt actual, lo enriquece con detalles de estilo, iluminación, composición, etc.
- */
 function enhanceImagePromptWithAI() {
-  // Obtener el canal de la publicación actual
-  var pubChannel = '';
-  var editorContent = document.getElementById('pubEditorContent');
-  if (editorContent) pubChannel = editorContent.getAttribute('data-pub-channel') || '';
-  // Función desactivada - redirigir a prompt externo
-  showNotification('La mejora de prompts con IA local ha sido desactivada. Usa "Generar prompt para herramienta externa" en su lugar.', 'info');
-  // Nota: cuando se reactive, enviar channel: pubChannel en el body del fetch
+  showNotification('SmartRedes no incluye generación ni mejora de prompts de imagen.', 'info');
 }
 
-/**
- * Genera un prompt optimizado para herramientas externas de generación de imágenes:
- * Nano Banana, Midjourney, DALL-E 3, Stable Diffusion, Adobe Firefly, etc.
- * El prompt resultante sigue las convenciones de cada herramienta (descriptivo, con estilos, pesos, etc.)
- */
 function generateExternalPrompt() {
-  var promptEl = document.getElementById('editPubImagePromptInline') || document.getElementById('editPubImagePrompt');
-  var currentPrompt = promptEl ? promptEl.value.trim() : '';
-
-  // Obtener contexto de la publicación actual
-  var pubText = (document.getElementById('editPubText') || {}).value || '';
-  var hashtags = (document.getElementById('editPubHashtags') || {}).value || '';
-
-  if (!currentPrompt && !pubText) {
-    showNotification('Escribe un prompt o texto del post antes de generar', 'error');
-    return;
-  }
-
-  var btn = document.getElementById('btnExternalPrompt');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading-spinner"></span> Generando...'; }
-
-  // Obtener el canal de la publicación actual
-  var pubChannel = '';
-  var editorContent = document.getElementById('pubEditorContent');
-  if (editorContent) pubChannel = editorContent.getAttribute('data-pub-channel') || '';
-
-  fetch(apiUrl('/image-prompt/external'), {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json; charset=utf-8'},
-    body: JSON.stringify({
-      prompt: currentPrompt,
-      post_text: pubText,
-      hashtags: hashtags,
-      channel: pubChannel,
-    }),
-  })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (btn) { btn.disabled = false; btn.innerHTML = '🌐 Prompt para herramienta externa'; }
-      if (data.external_prompt) {
-        var panel = document.getElementById('externalPromptPanel');
-        var textArea = document.getElementById('externalPromptText');
-        if (textArea) textArea.value = data.external_prompt;
-        if (panel) panel.style.display = 'block';
-        showNotification('🌐 Prompt externo generado. ¡Listo para copiar!', 'success');
-      } else {
-        showNotification('Error al generar prompt externo: ' + (data.detail || 'Sin respuesta'), 'error');
-      }
-    })
-    .catch(function(e) {
-      if (btn) { btn.disabled = false; btn.innerHTML = '🌐 Prompt para herramienta externa'; }
-      showNotification('Error: ' + e.message, 'error');
-    });
+  showNotification('SmartRedes no incluye prompts para generadores de imagen externos.', 'info');
 }
 
-/**
- * Copia el prompt externo generado al portapapeles.
- */
-function copyExternalPrompt() {
-  var textArea = document.getElementById('externalPromptText');
-  if (!textArea || !textArea.value) {
-    showNotification('No hay prompt para copiar', 'error');
-    return;
-  }
-  navigator.clipboard.writeText(textArea.value)
-    .then(function() { showNotification('📋 Prompt copiado al portapapeles', 'success'); })
-    .catch(function() {
-      // Fallback para navegadores sin clipboard API
-      textArea.select();
-      document.execCommand('copy');
-      showNotification('📋 Prompt copiado', 'success');
-    });
-}
+function copyExternalPrompt() {}
 
 // generateWithAI: compatibilidad con código anterior (solo texto)
 function generateWithAI(pubId) {

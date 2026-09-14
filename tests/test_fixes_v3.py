@@ -696,68 +696,36 @@ class TestImageAspectRatios:
         fields = app_module.ImagePromptExternalRequest.model_fields
         assert "channel" in fields
 
-    def test_enhance_endpoint_accepts_channel(self, brand_with_campaign):
-        """El endpoint enhance debe aceptar el campo channel."""
+    def test_enhance_endpoint_disabled_in_smartredes(self, brand_with_campaign):
+        """SmartRedes no expone generación/mejora de prompts de imagen."""
         ctx = brand_with_campaign
         client = ctx["client"]
-        data_dir = ctx["data_dir"]
+        response = client.post(
+            "/api/image-prompt/enhance",
+            json={"prompt": "A product photo", "channel": "Instagram"},
+        )
+        assert response.status_code == 404
 
-        # Configurar un modelo en config.json para que no falle con 503
-        config = {"default_model": "llama3.2", "model": "llama3.2"}
-        with open(data_dir / "config.json", "w") as f:
-            json.dump(config, f)
-
-        with patch("app.call_ollama", return_value="Enhanced prompt for Instagram 1:1"):
-            response = client.post(
-                "/api/image-prompt/enhance",
-                json={"prompt": "A product photo", "channel": "Instagram"},
-            )
-        assert response.status_code == 200
-        data = response.json()
-        assert "enhanced_prompt" in data
-
-    def test_external_endpoint_accepts_channel(self, brand_with_campaign):
-        """El endpoint external debe aceptar el campo channel."""
+    def test_external_endpoint_disabled_in_smartredes(self, brand_with_campaign):
+        """SmartRedes no expone prompts para herramientas externas de imagen."""
         ctx = brand_with_campaign
         client = ctx["client"]
-        data_dir = ctx["data_dir"]
+        response = client.post(
+            "/api/image-prompt/external",
+            json={
+                "prompt": "A product photo",
+                "post_text": "Check out our new product!",
+                "channel": "Facebook",
+            },
+        )
+        assert response.status_code == 404
 
-        # Configurar un modelo en config.json
-        config = {"default_model": "llama3.2", "model": "llama3.2"}
-        with open(data_dir / "config.json", "w") as f:
-            json.dump(config, f)
-
-        with patch("app.call_ollama", return_value="Professional product shot, square composition --ar 1:1"):
-            response = client.post(
-                "/api/image-prompt/external",
-                json={
-                    "prompt": "A product photo",
-                    "post_text": "Check out our new product!",
-                    "channel": "Facebook",
-                },
-            )
-        assert response.status_code == 200
-        data = response.json()
-        assert "external_prompt" in data
-
-    def test_frontend_sends_channel_to_enhance(self):
-        """El frontend debe enviar el canal en la llamada a enhance."""
+    def test_frontend_has_no_image_prompt_ai_buttons(self):
+        """La UI no debe ofrecer generación de prompts de imagen."""
         html_path = Path(__file__).parent.parent / "app" / "index.html"
         content = html_path.read_text(encoding="utf-8")
-        # Verificar que enhanceImagePromptWithAI obtiene el canal
-        assert "data-pub-channel" in content
-        # Verificar que se envía channel en el JSON
-        idx = content.find("function enhanceImagePromptWithAI")
-        func_code = content[idx:idx+1000]
-        assert "channel: pubChannel" in func_code
-
-    def test_frontend_sends_channel_to_external(self):
-        """El frontend debe enviar el canal en la llamada a external."""
-        html_path = Path(__file__).parent.parent / "app" / "index.html"
-        content = html_path.read_text(encoding="utf-8")
-        idx = content.find("function generateExternalPrompt")
-        func_code = content[idx:idx+2000]
-        assert "channel: pubChannel" in func_code
+        assert "Generar prompt para herramienta externa" not in content
+        assert "btnExternalPrompt" not in content
 
 
 # ============================================================

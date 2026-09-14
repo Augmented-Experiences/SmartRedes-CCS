@@ -539,7 +539,7 @@ class TestPinokioConfig:
         meta_path = Path(__file__).parent.parent / "pinokio.json"
         data = json.loads(meta_path.read_text(encoding="utf-8"))
         assert "title" in data
-        assert "CCS Brand Assistant" in data["title"]
+        assert "SmartRedes" in data["title"]
 
 
 # ============================================================
