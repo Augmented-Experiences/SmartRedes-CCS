@@ -51,7 +51,7 @@ fn app_config() -> &'static AppConfig {
     CFG.get_or_init(|| serde_json::from_str(APP_CONFIG_JSON).expect("appconfig.json inválido"))
 }
 
-fn product_name() -> &str {
+fn product_name() -> &'static str {
     &app_config().product_name
 }
 
