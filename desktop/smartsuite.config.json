@@ -5,6 +5,7 @@
   "dataDirName": "SmartRedes",
   "accent": "#0FB5A6",
   "window": { "title": "SmartRedes", "width": 1280, "height": 840, "minWidth": 960, "minHeight": 640 },
+  "splashSubtitle": "Preparando tu asistente de marca y redes con IA local…",
   "shortDescription": "Asistente de marca/redes con IA local (CCCE)",
   "longDescription": "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara Colombiana de Comercio Electrónico (CCCE).",
   "ollama": {

@@ -1,7 +1,7 @@
 [package]
-name = "smartcaja"
-version = "2.0.0"
-description = "SmartCaja — flujo de caja con IA local (CCCE)"
+name = "smartredes"
+version = "1.0.0"
+description = "Asistente de marca/redes con IA local (CCCE)"
 authors = ["Cámara Colombiana de Comercio Electrónico (CCCE)"]
 edition = "2021"
 rust-version = "1.77"
@@ -18,7 +18,7 @@ sysinfo = "0.33"
 ureq = { version = "2", default-features = false }
 
 [[bin]]
-name = "smartcaja"
+name = "smartredes"
 path = "src/main.rs"
 
 [profile.release]

@@ -1,6 +1,6 @@
-// SmartCaja — app de escritorio nativa (Tauri v2)
+// SmartSuite — app de escritorio nativa (Tauri v2)
 //
-// Arranca el backend FastAPI empaquetado (sidecar `smartcaja-backend`), prepara
+// Arranca el backend FastAPI empaquetado (sidecar `backend`), prepara
 // Ollama (servicio + descarga del modelo según la RAM) y muestra el progreso en
 // la pantalla de carga. Cuando todo está listo, la ventana carga la UI real.
 // Al cerrar la app, detiene el backend.
@@ -35,6 +35,7 @@ struct Tier {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AppConfig {
+    product_name: String,
     data_dir_name: String,
     ollama_tiers: Vec<Tier>,
     /// Modelos adicionales a descargar con progreso (p. ej. modelo de visión
@@ -48,6 +49,10 @@ static APP_CONFIG_JSON: &str = include_str!("../appconfig.json");
 fn app_config() -> &'static AppConfig {
     static CFG: OnceLock<AppConfig> = OnceLock::new();
     CFG.get_or_init(|| serde_json::from_str(APP_CONFIG_JSON).expect("appconfig.json inválido"))
+}
+
+fn product_name() -> &str {
+    &app_config().product_name
 }
 
 /// Proceso hijo del backend (para terminarlo al salir).
@@ -274,7 +279,7 @@ fn bootstrap_ollama(app: tauri::AppHandle) {
             s.message = "Verificando el motor de IA (Ollama)…".into();
             s.percent = -1;
         });
-        ollama_log("== SmartCaja: preparando el motor de IA (Ollama) ==");
+        ollama_log(&format!("== {}: preparando el motor de IA (Ollama) ==", product_name()));
 
         let installed = ollama_command()
             .arg("--version")
@@ -422,7 +427,7 @@ fn main() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error al construir la app de SmartCaja")
+        .expect("error al construir la app de escritorio")
         .run(|app_handle, event| {
             if let RunEvent::Exit = event {
                 if let Some(child) = app_handle.state::<BackendState>().0.lock().unwrap().take() {

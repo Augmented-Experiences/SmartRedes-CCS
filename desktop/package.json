@@ -1,8 +1,8 @@
 {
-  "name": "smartcaja-desktop",
-  "version": "2.0.0",
+  "name": "smartredes-desktop",
+  "version": "1.0.0",
   "private": true,
-  "description": "Instalador/app de escritorio nativo de SmartCaja (Tauri) — CCCE",
+  "description": "Instalador/app de escritorio nativo de SmartRedes (Tauri) — CCCE",
   "scripts": {
     "tauri": "tauri",
     "configure": "node scripts/configure.mjs",
