@@ -1,5 +1,5 @@
 """
-Tests del API Backend — CCS Brand Assistant
+Tests del API Backend — SmartRedes
 ============================================
 Suite de tests que valida los endpoints principales del servidor FastAPI.
 Compatible con Windows y macOS/Linux.
