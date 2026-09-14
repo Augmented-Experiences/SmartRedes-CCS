@@ -26,7 +26,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "deb",
+      "rpm",
+      "appimage"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -37,7 +41,7 @@
     "externalBin": [
       "binaries/backend"
     ],
-    "category": "Productivity",
+    "category": "Finance",
     "shortDescription": "Asistente de marca/redes con IA local (CCCE)",
     "longDescription": "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara Colombiana de Comercio Electrónico (CCCE)."
   },

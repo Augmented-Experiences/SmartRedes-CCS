@@ -1,7 +1,7 @@
 [package]
 name = "smartredes"
 version = "1.0.0"
-description = "Asistente de marca/redes con IA local (CCCE)"
+description = "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara Colombiana de Comercio Electrónico (CCCE)."
 authors = ["Cámara Colombiana de Comercio Electrónico (CCCE)"]
 edition = "2021"
 rust-version = "1.77"

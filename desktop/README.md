@@ -42,7 +42,7 @@ Todo lo específico de cada app vive en `desktop/smartsuite.config.json`:
 | `ollama.tiers` | Modelo (chat/LLM) a descargar según la RAM (`maxRamGb: 0` = sin límite / último). |
 | `ollama.extraModels` | Modelos adicionales a descargar con progreso (p. ej. un modelo de **visión para OCR neuronal** como `moondream`). Se descargan igual que el LLM, con barra de progreso en la pantalla de carga — así capacidades pesadas (OCR) no requieren empaquetar torch/easyocr. |
 
-`scripts/configure.mjs` (se ejecuta solo con `npm run build`/`npm run dev`) genera desde ese config: `src-tauri/tauri.conf.json` (nombre de instaladores `.msi`/`-setup.exe`), `src-tauri/Cargo.toml`, `src-tauri/appconfig.json` (que Rust lee), `package.json`, `ui/index.html` (splash), y los CSS de marca (`ui/ccce-theme.css`, `ui/accent.css`). Edita `ui/splash.template.html` para cambios estructurales del splash; el título y la marca salen de `productName` / `splashSubtitle`.
+`scripts/configure.mjs` (se ejecuta solo con `npm run build`/`npm run dev`) genera desde ese config: `src-tauri/tauri.conf.json` (nombre de instaladores `.msi`/`-setup.exe` en Windows), `src-tauri/Cargo.toml`, `src-tauri/appconfig.json` (que Rust lee), `package.json`, `ui/index.html` (splash con logo `splashLogo` / isotipo CCCE), y los CSS de marca (`ui/ccce-theme.css`, `ui/accent.css`). Edita `ui/splash.template.html` para cambios estructurales del splash; el título, subtítulo y logo salen de `productName`, `splashSubtitle` y `splashLogo`.
 
 ## Brand kit CCCE (estilo compartido)
 
