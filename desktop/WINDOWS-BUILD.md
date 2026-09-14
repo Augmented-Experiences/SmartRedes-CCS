@@ -50,18 +50,28 @@ npm run build
 
 ## 2) SmartRedes (repo `ccs-brand-assistant`)
 
+**`main` aún no trae el splash nuevo** (isotipo + subtítulo marca/redes + acento `#0FB5A6`). Compila en la rama del instalador:
+
 ```powershell
 git clone https://github.com/Augmented-Experiences/ccs-brand-assistant.git SmartRedes
 cd SmartRedes
-# Aplica todos los cambios (UI CCCE + kit desktop + parche app.py + requirements-desktop):
-git apply smartredes_full.patch        # el .patch está en los artefactos del agente
+git fetch origin cursor/smartredes-desktop-branding-94b9
+git checkout cursor/smartredes-desktop-branding-94b9
+git pull origin cursor/smartredes-desktop-branding-94b9
+# Debe existir la plantilla del splash (si falla, estás en la rama equivocada):
+if (-not (Test-Path desktop\ui\splash.template.html)) { throw "Falta splash.template.html — usa cursor/smartredes-desktop-branding-94b9" }
 py -3.12 -m venv venv
 powershell -ExecutionPolicy Bypass -File desktop\scripts\build-backend.ps1
 cd desktop
 npm install
 npm run icon
 npm run build
+# npm run build ejecuta configure.mjs antes de tauri build; verifica el splash generado:
+Select-String -Path ui\index.html -Pattern 'splash-logo','marca y redes','splash-kit: configure.mjs'
+Select-String -Path ui\accent.css -Pattern '0FB5A6'
 ```
+
+Si ya aplicaste `smartredes_full.patch` en un clone antiguo, mejor clona de nuevo y usa solo la rama anterior (el kit desktop ya está en el repo).
 
 ## 3) SmartGastos (repo `pyme-ledger-ai.pinokio`)
 

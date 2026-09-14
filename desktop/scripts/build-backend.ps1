@@ -75,3 +75,8 @@ $Triple = ((rustc -vV | Select-String "host: ") -replace "host: ", "").Trim()
 New-Item -ItemType Directory -Force -Path desktop/src-tauri/binaries | Out-Null
 Copy-Item "desktop/backend/dist/backend.exe" "desktop/src-tauri/binaries/backend-$Triple.exe" -Force
 Write-Host "==> Sidecar listo: desktop/src-tauri/binaries/backend-$Triple.exe"
+
+Write-Host "==> Configurando splash / Tauri (configure.mjs)"
+Set-Location $Desktop
+& node scripts/configure.mjs
+Set-Location $Root

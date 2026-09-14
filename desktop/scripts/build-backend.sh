@@ -59,3 +59,6 @@ mkdir -p desktop/src-tauri/binaries
 cp "desktop/backend/dist/backend" "desktop/src-tauri/binaries/backend-${TRIPLE}"
 chmod +x "desktop/src-tauri/binaries/backend-${TRIPLE}"
 echo "==> Sidecar listo: desktop/src-tauri/binaries/backend-${TRIPLE}"
+
+echo "==> Configurando splash / Tauri (configure.mjs)"
+(cd desktop && node scripts/configure.mjs)

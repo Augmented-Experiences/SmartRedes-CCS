@@ -210,13 +210,39 @@ if (logoSrc) {
   logoHtml = `<img class="splash-logo" src="splash-logo.png" alt="${escapeHtml(productName)}" />\n  `;
 }
 
-const splashTpl = readFileSync(resolve(DESKTOP, "ui/splash.template.html"), "utf8");
-const splashHtml = splashTpl
+const splashTplPath = resolve(DESKTOP, "ui/splash.template.html");
+if (!existsSync(splashTplPath)) {
+  throw new Error(
+    "Falta desktop/ui/splash.template.html. En ccs-brand-assistant usa la rama " +
+      "cursor/smartredes-desktop-branding-94b9 (main aún no incluye el splash SmartGastos-style)."
+  );
+}
+const splashTpl = readFileSync(splashTplPath, "utf8");
+const docStart = splashTpl.indexOf("<!DOCTYPE");
+if (docStart < 0) {
+  throw new Error("splash.template.html: falta <!DOCTYPE html>");
+}
+const splashPrefix = splashTpl.slice(0, docStart);
+let splashDoc = splashTpl.slice(docStart);
+splashDoc = splashDoc
   .replaceAll("{{PRODUCT_NAME}}", escapeHtml(productName))
   .replaceAll("{{BRAND_HTML}}", brandHtml(productName))
   .replaceAll("{{SPLASH_SUBTITLE}}", escapeHtml(splashSubtitle))
   .replaceAll("{{LOGO_HTML}}", logoHtml);
-writeFileSync(resolve(DESKTOP, "ui/index.html"), splashHtml);
+const splashStamp = `<!-- splash-kit: configure.mjs product=${escapeHtml(productName)} accent=${accent} -->\n`;
+const splashHtml = splashPrefix + splashStamp + splashDoc;
+const indexPath = resolve(DESKTOP, "ui/index.html");
+writeFileSync(indexPath, splashHtml);
+const subtitleNeedle = String(splashSubtitle).slice(0, 24);
+if (!splashHtml.includes('class="splash-logo"')) {
+  throw new Error("configure.mjs: ui/index.html generado sin splash-logo (revisa splash.template.html)");
+}
+if (!splashHtml.includes(escapeHtml(productName))) {
+  throw new Error(`configure.mjs: ui/index.html no contiene productName '${productName}'`);
+}
+if (subtitleNeedle && !splashHtml.includes(subtitleNeedle)) {
+  throw new Error("configure.mjs: ui/index.html no contiene splashSubtitle esperado");
+}
 
 // --- 7) Cargo.lock: alinear nombre del paquete si cambió ---
 const lockPath = resolve(DESKTOP, "src-tauri/Cargo.lock");
