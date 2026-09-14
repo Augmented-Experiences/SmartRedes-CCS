@@ -10,7 +10,7 @@ module.exports = {
     {
       method: "log",
       params: {
-        html: "<div style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:24px 20px 0'><div style='display:flex;align-items:center;gap:14px;margin-bottom:16px'><div style='width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#3DAE2B,#2d8a1f);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;flex-shrink:0'>B</div><div><h2 style='margin:0;font-size:20px;color:#e2e8f0'>CCS Brand Assistant</h2><p style='margin:4px 0 0;color:#94a3b8;font-size:13px'>Plataforma de ADN de marca y campa&ntilde;as digitales con IA local</p></div></div><div style='background:#1e293b;border-radius:8px;padding:14px 16px;margin-bottom:8px'><div style='display:flex;justify-content:space-between;margin-bottom:8px'><span style='color:#94a3b8;font-size:12px'>Plataforma</span><span style='color:#e2e8f0;font-size:12px;font-weight:600'>{{platform}}</span></div><div style='display:flex;justify-content:space-between;margin-bottom:8px'><span style='color:#94a3b8;font-size:12px'>RAM disponible</span><span style='color:#e2e8f0;font-size:12px;font-weight:600'>{{ram}} GB</span></div><div style='display:flex;justify-content:space-between'><span style='color:#94a3b8;font-size:12px'>Modelo de IA</span><span style='color:#3DAE2B;font-size:12px;font-weight:600'>{{ram < 6 ? 'llama3.2:1b (ligero)' : ram < 12 ? 'llama3.2:3b (est&aacute;ndar)' : 'llama3.1:8b (avanzado)'}}</span></div></div></div>"
+        html: "<div style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:24px 20px 0'><div style='display:flex;align-items:center;gap:14px;margin-bottom:16px'><div style='width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#0FB5A6,#0a8f83);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;flex-shrink:0'>S</div><div><h2 style='margin:0;font-size:20px;color:#e2e8f0'>SmartRedes</h2><p style='margin:4px 0 0;color:#94a3b8;font-size:13px'>ADN de marca y campa&ntilde;as con IA local (CCCE)</p></div></div><div style='background:#1e293b;border-radius:8px;padding:14px 16px;margin-bottom:8px'><div style='display:flex;justify-content:space-between;margin-bottom:8px'><span style='color:#94a3b8;font-size:12px'>Plataforma</span><span style='color:#e2e8f0;font-size:12px;font-weight:600'>{{platform}}</span></div><div style='display:flex;justify-content:space-between;margin-bottom:8px'><span style='color:#94a3b8;font-size:12px'>RAM disponible</span><span style='color:#e2e8f0;font-size:12px;font-weight:600'>{{ram}} GB</span></div><div style='display:flex;justify-content:space-between'><span style='color:#94a3b8;font-size:12px'>Modelo de IA</span><span style='color:#3DAE2B;font-size:12px;font-weight:600'>{{ram < 6 ? 'llama3.2:1b (ligero)' : ram < 12 ? 'llama3.2:3b (est&aacute;ndar)' : 'llama3.1:8b (avanzado)'}}</span></div></div></div>"
       }
     },
 
@@ -143,7 +143,7 @@ module.exports = {
     {
       method: "notify",
       params: {
-        html: "Instalación completada. Iniciando CCS Brand Assistant..."
+        html: "Instalación completada. Iniciando SmartRedes..."
       }
     },
 

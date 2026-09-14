@@ -1,5 +1,5 @@
 /**
- * CCS Brand Assistant — Pinokio launcher (Gepeto v5.0 + one-click autostart)
+ * SmartRedes — Pinokio launcher (Gepeto v5.0 + one-click autostart)
  *
  * Flujo one-click (Pinokio 2.0+):
  *   1. Usuario abre la app → se ejecuta automáticamente el script con default: true
@@ -9,8 +9,8 @@
  */
 module.exports = {
   version: "5.0",
-  title: "CCS Brand Assistant",
-  description: "Plataforma de ADN de marca y campañas digitales con IA local para PYMEs — Cámara de Comercio de Santiago",
+  title: "SmartRedes",
+  description: "Asistente de marca y redes con IA local para PYMEs — CCCE",
   icon: "icon.png",
 
   menu: async (kernel, info) => {
@@ -122,7 +122,7 @@ module.exports = {
         icon: "fa-regular fa-circle-xmark",
         text: "<div><strong>Desinstalar</strong><div>Elimina el entorno virtual (conserva data/)</div></div>",
         href: "reset.js",
-        confirm: "¿Desinstalar CCS Brand Assistant? Los datos en data/ se conservarán.",
+        confirm: "¿Desinstalar SmartRedes? Los datos en data/ se conservarán.",
       }]
     }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CCS Brand Assistant — Cámara de Comercio de Santiago</title>
+  <title>SmartRedes — CCCE · IA local para PYMEs</title>
   <style>
     /* ===== FUENTES CCS ===== */
     @font-face {
@@ -66,22 +66,29 @@
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      /* === Paleta CCS 2025 === */
-      /* Primarios */
-      --ccs-azul-oscuro:   #0D3DA6;
-      --ccs-verde:         #3DAE2B;
-      /* Secundarios */
-      --ccs-azul:          #0D56CA;
-      --ccs-celeste:       #3A6DDE;
-      --ccs-verde-brillante: #0DD700;
+      /* === Paleta CCCE (SmartSuite) === */
+      --ccce-azul-oscuro: #173A7A;
+      --ccce-verde: #3DAE2B;
+      --ccce-azul: #1E56A8;
+      --ccce-celeste: #2E6FC0;
+      --ccce-verde-brillante: #0DD700;
+      --ccce-rojo: #CE1126;
+      --ccce-dorado: #F4C10E;
+      --ccce-accent: #0FB5A6;
+      /* Alias legacy en esta UI */
+      --ccs-azul-oscuro: var(--ccce-azul-oscuro);
+      --ccs-verde: var(--ccce-verde);
+      --ccs-azul: var(--ccce-azul);
+      --ccs-celeste: var(--ccce-celeste);
+      --ccs-verde-brillante: var(--ccce-verde-brillante);
 
       /* === Variables de UI (tema claro) === */
       --bg-base:    #F7F8FA;
       --bg-card:    #FFFFFF;
       --bg-hover:   #EEF2F8;
-      --primary:    #0D3DA6;
-      --primary-h:  #0D56CA;
-      --accent:     #3A6DDE;
+      --primary:    var(--ccce-azul-oscuro);
+      --primary-h:  var(--ccce-azul);
+      --accent:     var(--ccce-accent);
       --success:    #3DAE2B;
       --success-h:  #0DD700;
       --warning:    #f59e0b;
@@ -89,7 +96,7 @@
       --text-main:  #1A2340;
       --text-muted: #6B7A99;
       --border:     #D6DFF0;
-      --border-focus: #0D56CA;
+      --border-focus: var(--ccce-celeste);
       --radius:     10px;
       --sidebar-w:  252px;
 
@@ -147,7 +154,8 @@
       align-items: center;
       gap: 10px;
       padding: 16px 14px 14px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 3px solid transparent;
+      border-image: linear-gradient(90deg, var(--ccce-azul-oscuro) 0 33%, var(--ccce-rojo) 33% 66%, var(--ccce-dorado) 66% 100%) 1;
       background: #FFFFFF;
     }
     /* Logo CCS discreto en el sidebar */
@@ -159,10 +167,11 @@
       flex-shrink: 0;
     }
     .sidebar-logo-divider {
-      width: 1px;
+      width: 2px;
       height: 28px;
-      background: var(--border);
+      background: var(--ccce-accent);
       flex-shrink: 0;
+      border-radius: 2px;
     }
     .sidebar-logo-text {
       font-size: 11px;
@@ -200,11 +209,12 @@
       transition: all 0.15s;
       margin-bottom: 2px;
     }
-    .nav-item:hover { background: var(--bg-hover); color: var(--primary); }
+    .nav-item:hover { background: rgba(15,181,166,0.12); color: var(--ccce-azul-oscuro); }
     .nav-item.active {
-      background: linear-gradient(135deg, var(--ccs-azul-oscuro), var(--ccs-azul));
+      background: linear-gradient(135deg, var(--ccce-accent), #0a9a8e);
       color: #fff;
-      box-shadow: 0 2px 8px rgba(13,61,166,0.25);
+      font-weight: 700;
+      box-shadow: inset 3px 0 0 var(--ccce-rojo), 0 2px 8px rgba(15,181,166,0.35);
     }
     .nav-item .nav-icon { width: 18px; text-align: center; font-size: 14px; }
     .nav-badge {
@@ -974,11 +984,11 @@
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <!-- Logo CCS discreto -->
-      <img src="logo-ccs.svg" alt="Cámara de Comercio de Santiago" class="sidebar-logo-img" onerror="this.src='icon.png'" />
+      <img src="logo-ccce.png" alt="SmartRedes — CCCE" class="sidebar-logo-img" onerror="this.src='icon.png'" />
       <div class="sidebar-logo-divider"></div>
       <div>
-        <div class="sidebar-logo-text">Brand Assistant</div>
-        <div class="sidebar-logo-sub">IA local para PYMEs</div>
+        <div class="sidebar-logo-text">SmartRedes</div>
+        <div class="sidebar-logo-sub">CCCE · IA local para PYMEs</div>
       </div>
     </div>
 
@@ -3677,10 +3687,6 @@ function generateImageWithAI(pubId) {
 
 /* Funciones de generación local de imágenes removidas - se usa herramienta externa + carga manual */
 
-/**
- * Mejora el prompt de imagen actual usando Ollama para obtener mejores resultados.
- * Toma el prompt actual, lo enriquece con detalles de estilo, iluminación, composición, etc.
- */
 function enhanceImagePromptWithAI() {
   // Obtener el canal de la publicación actual
   var pubChannel = '';

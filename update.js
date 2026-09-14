@@ -6,7 +6,7 @@ module.exports = {
     {
       method: "log",
       params: {
-        html: "<div style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:16px 20px'><span style='color:#e2e8f0;font-size:14px;font-weight:600'>Actualizando CCS Brand Assistant...</span></div>"
+        html: "<div style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:16px 20px'><span style='color:#e2e8f0;font-size:14px;font-weight:600'>Actualizando SmartRedes...</span></div>"
       }
     },
     {
@@ -29,7 +29,7 @@ module.exports = {
     {
       method: "notify",
       params: {
-        html: "CCS Brand Assistant actualizado correctamente."
+        html: "SmartRedes actualizado correctamente."
       }
     }
   ]
