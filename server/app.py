@@ -1,6 +1,6 @@
 """
 SmartRedes — Backend FastAPI
-Plugin de Pinokio para gestión de ADN de marca y campañas digitales con IA local (CCCE).
+Plugin de Pinokio para gestión de ADN de marca y campañas digitales con IA local de la Cámara de Comercio de Santiago (CCS).
 
 Arquitectura:
   - Módulo de Marcas: CRUD de marcas y onboarding

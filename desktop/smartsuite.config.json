@@ -1,14 +1,14 @@
 {
   "productName": "SmartRedes",
-  "identifier": "co.org.ccce.smartredes",
+  "identifier": "cl.ccs.smartredes",
   "version": "1.0.0",
   "dataDirName": "SmartRedes",
   "accent": "#0FB5A6",
   "window": { "title": "SmartRedes", "width": 1280, "height": 840, "minWidth": 960, "minHeight": 640 },
   "splashSubtitle": "Preparando tu asistente de marca y redes con IA local...",
-  "splashLogo": "brand/isotipo-ccce.png",
-  "shortDescription": "Asistente de marca/redes con IA local (CCCE)",
-  "longDescription": "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara Colombiana de Comercio Electrónico (CCCE).",
+  "splashLogo": "../app/logo-ccs.svg",
+  "shortDescription": "Asistente de marca/redes con IA local (CCS)",
+  "longDescription": "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara de Comercio de Santiago (CCS).",
   "ollama": {
     "tiers": [
       { "maxRamGb": 6, "model": "llama3.2:1b" },

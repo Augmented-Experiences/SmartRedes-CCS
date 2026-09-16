@@ -1,6 +1,6 @@
-# Generar los instaladores de Windows localmente (SmartSuite CCCE)
+# Generar los instaladores de Windows localmente (SmartSuite CCS)
 
-Guía paso a paso para compilar en **Windows** el instalador `.msi`/`.exe` de cada herramienta (SmartCaja, SmartRedes, SmartGastos) con el kit Tauri. "Nuestro propio Pinokio": un instalador nativo por app, con marca CCCE y descarga de modelos (LLM + visión/OCR) con progreso en el arranque.
+Guía paso a paso para compilar en **Windows** el instalador `.msi`/`.exe` de cada herramienta (SmartCaja, SmartRedes, SmartGastos) con el kit Tauri. "Nuestro propio Pinokio": un instalador nativo por app, con marca de Cámara de Comercio de Santiago y descarga de modelos LLM con progreso en el arranque.
 
 ---
 
@@ -37,7 +37,7 @@ winget install -e --id Microsoft.VisualStudio.2022.BuildTools
 ## 1) SmartCaja
 
 ```powershell
-git clone -b cursor/rebrand-smartcaja-ccce-2bcd https://github.com/Augmented-Experiences/ccs-cashflow-assistant.git SmartCaja
+git clone https://github.com/Augmented-Experiences/ccs-cashflow-assistant.git SmartCaja
 cd SmartCaja
 py -3.12 -m venv venv
 powershell -ExecutionPolicy Bypass -File desktop\scripts\build-backend.ps1
@@ -48,18 +48,15 @@ npm run build
 ```
 > Nota: usa la rama del instalador (`cursor/smartcaja-tauri-installer-2bcd`) si quieres exactamente el estado con todo el kit más reciente.
 
-## 2) SmartRedes (repo `ccs-brand-assistant`)
+## 2) SmartRedes (repo `SmartRedes-CCS`)
 
-**`main` aún no trae el splash nuevo** (isotipo + subtítulo marca/redes + acento `#0FB5A6`). Compila en la rama del instalador:
+Compila desde la rama `kit`, que contiene el splash con logo CCS, subtítulo de marca/redes y acento `#0FB5A6`:
 
 ```powershell
-git clone https://github.com/Augmented-Experiences/ccs-brand-assistant.git SmartRedes
+git clone -b kit https://github.com/Augmented-Experiences/SmartRedes-CCS.git SmartRedes
 cd SmartRedes
-git fetch origin cursor/smartredes-desktop-branding-94b9
-git checkout cursor/smartredes-desktop-branding-94b9
-git pull origin cursor/smartredes-desktop-branding-94b9
-# Debe existir la plantilla del splash (si falla, estás en la rama equivocada):
-if (-not (Test-Path desktop\ui\splash.template.html)) { throw "Falta splash.template.html — usa cursor/smartredes-desktop-branding-94b9" }
+# Debe existir la plantilla del splash:
+if (-not (Test-Path desktop\ui\splash.template.html)) { throw "Falta splash.template.html — usa la rama kit" }
 py -3.12 -m venv venv
 powershell -ExecutionPolicy Bypass -File desktop\scripts\build-backend.ps1
 cd desktop
@@ -71,7 +68,7 @@ Select-String -Path ui\index.html -Pattern 'splash-logo','marca y redes','splash
 Select-String -Path ui\accent.css -Pattern '0FB5A6'
 ```
 
-Si ya aplicaste `smartredes_full.patch` en un clone antiguo, mejor clona de nuevo y usa solo la rama anterior (el kit desktop ya está en el repo).
+Si ya aplicaste `smartredes_full.patch` en un clone antiguo, mejor clona de nuevo y usa la rama `kit`.
 
 ## 3) SmartGastos (repo `pyme-ledger-ai.pinokio`)
 
@@ -93,10 +90,10 @@ npm run build
 Si prefieres no usar el `.patch`, en cada repo (SmartRedes/SmartGastos):
 1. Copia la carpeta `desktop/` del kit (del repo SmartCaja) a la raíz del repo.
 2. Copia `desktop/examples/<tool>.config.json` como `desktop/smartsuite.config.json`.
-3. Reemplaza `icon.png` de la raíz por el isotipo CCCE.
+3. Usa `app/logo-ccs.svg` como el logo del instalador (`npm run icon`).
 4. Aplica el parche de `server/app.py` (`smartredes_app_py.patch` / `smartgastos_app_py.patch`): `BASE_DIR` frozen-aware, `DATA_DIR` por env, y `import sys`.
 5. Crea `requirements-desktop.txt` (subconjunto liviano sin torch/easyocr/diffusers).
-6. Aplica el brand kit a la UI (`app/index.html`): variables `--ccce-*`, logo `logo-ccce.png`, nombre de la herramienta.
+6. Aplica el brand kit a la UI (`app/index.html`): variables `--ccs-*`, logo `logo-ccs.svg`, nombre de la herramienta.
 
 ---
 

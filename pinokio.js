@@ -10,7 +10,7 @@
 module.exports = {
   version: "5.0",
   title: "SmartRedes",
-  description: "Asistente de marca y redes con IA local para PYMEs — CCCE",
+  description: "Asistente de marca y redes con IA local para PYMEs — Cámara de Comercio de Santiago (CCS)",
   icon: "icon.png",
 
   menu: async (kernel, info) => {

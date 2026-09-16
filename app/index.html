@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartRedes — CCCE · IA local para PYMEs</title>
+  <title>SmartRedes — CCS · IA local para PYMEs</title>
   <style>
     /* ===== FUENTES CCS ===== */
     @font-face {
@@ -66,29 +66,21 @@
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      /* === Paleta CCCE (SmartSuite) === */
-      --ccce-azul-oscuro: #173A7A;
-      --ccce-verde: #3DAE2B;
-      --ccce-azul: #1E56A8;
-      --ccce-celeste: #2E6FC0;
-      --ccce-verde-brillante: #0DD700;
-      --ccce-rojo: #CE1126;
-      --ccce-dorado: #F4C10E;
-      --ccce-accent: #0FB5A6;
-      /* Alias legacy en esta UI */
-      --ccs-azul-oscuro: var(--ccce-azul-oscuro);
-      --ccs-verde: var(--ccce-verde);
-      --ccs-azul: var(--ccce-azul);
-      --ccs-celeste: var(--ccce-celeste);
-      --ccs-verde-brillante: var(--ccce-verde-brillante);
+      /* === Paleta Cámara de Comercio de Santiago (CCS) === */
+      --ccs-azul-oscuro: #003DA6;
+      --ccs-verde: #39B54A;
+      --ccs-azul: #0055B8;
+      --ccs-celeste: #0B71C8;
+      --ccs-verde-brillante: #0DD700;
+      --ccs-accent: #0FB5A6;
 
       /* === Variables de UI (tema claro) === */
       --bg-base:    #F7F8FA;
       --bg-card:    #FFFFFF;
       --bg-hover:   #EEF2F8;
-      --primary:    var(--ccce-azul-oscuro);
-      --primary-h:  var(--ccce-azul);
-      --accent:     var(--ccce-accent);
+      --primary:    var(--ccs-azul-oscuro);
+      --primary-h:  var(--ccs-azul);
+      --accent:     var(--ccs-accent);
       --success:    #3DAE2B;
       --success-h:  #0DD700;
       --warning:    #f59e0b;
@@ -96,7 +88,7 @@
       --text-main:  #1A2340;
       --text-muted: #6B7A99;
       --border:     #D6DFF0;
-      --border-focus: var(--ccce-celeste);
+      --border-focus: var(--ccs-celeste);
       --radius:     10px;
       --sidebar-w:  252px;
 
@@ -155,7 +147,7 @@
       gap: 10px;
       padding: 16px 14px 14px;
       border-bottom: 3px solid transparent;
-      border-image: linear-gradient(90deg, var(--ccce-azul-oscuro) 0 33%, var(--ccce-rojo) 33% 66%, var(--ccce-dorado) 66% 100%) 1;
+      border-image: linear-gradient(90deg, var(--ccs-azul-oscuro) 0 50%, var(--ccs-verde) 50% 75%, var(--ccs-accent) 75% 100%) 1;
       background: #FFFFFF;
     }
     /* Logo CCS discreto en el sidebar */
@@ -169,7 +161,7 @@
     .sidebar-logo-divider {
       width: 2px;
       height: 28px;
-      background: var(--ccce-accent);
+      background: var(--ccs-accent);
       flex-shrink: 0;
       border-radius: 2px;
     }
@@ -209,12 +201,12 @@
       transition: all 0.15s;
       margin-bottom: 2px;
     }
-    .nav-item:hover { background: rgba(15,181,166,0.12); color: var(--ccce-azul-oscuro); }
+    .nav-item:hover { background: rgba(15,181,166,0.12); color: var(--ccs-azul-oscuro); }
     .nav-item.active {
-      background: linear-gradient(135deg, var(--ccce-accent), #0a9a8e);
+      background: linear-gradient(135deg, var(--ccs-accent), #0a9a8e);
       color: #fff;
       font-weight: 700;
-      box-shadow: inset 3px 0 0 var(--ccce-rojo), 0 2px 8px rgba(15,181,166,0.35);
+      box-shadow: inset 3px 0 0 var(--ccs-verde), 0 2px 8px rgba(15,181,166,0.35);
     }
     .nav-item .nav-icon { width: 18px; text-align: center; font-size: 14px; }
     .nav-badge {
@@ -984,11 +976,11 @@
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <!-- Logo CCS discreto -->
-      <img src="logo-ccce.png" alt="SmartRedes — CCCE" class="sidebar-logo-img" onerror="this.src='icon.png'" />
+      <img src="logo-ccs.svg" alt="SmartRedes — Cámara de Comercio de Santiago" class="sidebar-logo-img" onerror="this.style.display='none'" />
       <div class="sidebar-logo-divider"></div>
       <div>
         <div class="sidebar-logo-text">SmartRedes</div>
-        <div class="sidebar-logo-sub">CCCE · IA local para PYMEs</div>
+        <div class="sidebar-logo-sub">CCS · IA local para PYMEs</div>
       </div>
     </div>
 

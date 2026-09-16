@@ -2,11 +2,11 @@
   "name": "smartredes-desktop",
   "version": "1.0.0",
   "private": true,
-  "description": "Instalador/app de escritorio nativo de SmartRedes (Tauri) — CCCE",
+  "description": "Instalador/app de escritorio nativo de SmartRedes (Tauri) — Cámara de Comercio de Santiago",
   "scripts": {
     "tauri": "tauri",
     "configure": "node scripts/configure.mjs",
-    "icon": "tauri icon ../icon.png",
+    "icon": "tauri icon ../app/logo-ccs.svg",
     "build": "node scripts/configure.mjs && tauri build",
     "dev": "node scripts/configure.mjs && tauri dev"
   },
