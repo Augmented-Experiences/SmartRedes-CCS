@@ -155,6 +155,10 @@ serde_json = "1"
 sysinfo = "0.33"
 ureq = { version = "2", default-features = false }
 
+[lib]
+name = "smartsuite_ollama"
+path = "src/ollama_portable.rs"
+
 [[bin]]
 name = "${pkg}"
 path = "src/main.rs"

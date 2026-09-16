@@ -35,6 +35,7 @@
     @keyframes slide { 0% { left: -40%; } 100% { left: 100%; } }
     .status { color: #dbe6ff; font-size: 13px; min-height: 18px; max-width: 460px; }
     .pct { color: var(--accent); font-weight: 700; font-size: 13px; min-height: 16px; }
+    .phase { color: #9fb2d6; font-size: 11px; min-height: 14px; letter-spacing: 0.04em; text-transform: uppercase; }
     .enter {
       margin-top: 6px; padding: 9px 22px; border-radius: 10px; border: 0; cursor: pointer;
       background: var(--brand-gradient); color: #FFFFFF;
@@ -53,6 +54,7 @@
   <div class="track indeterminate" id="track"><div class="fill" id="fill"></div></div>
   <div class="pct" id="pct"></div>
   <div class="status" id="status">Iniciando servicios...</div>
+  <div class="phase" id="phase"></div>
   <button class="enter" id="enter">Entrar ahora</button>
   <div class="foot">Cámara de Comercio de Santiago</div>
 
@@ -62,6 +64,17 @@
     const fillEl = document.getElementById('fill');
     const trackEl = document.getElementById('track');
     const enterBtn = document.getElementById('enter');
+    const phaseEl = document.getElementById('phase');
+
+    const PHASE_LABELS = {
+      'download-engine': 'Descargando Ollama',
+      extract: 'Extrayendo Ollama',
+      start: 'Iniciando Ollama',
+      downloading: 'Descargando modelo',
+      ollama: 'Preparando IA',
+      ready: 'Listo',
+      warning: 'Aviso'
+    };
 
     let backendUrl = null;
     let navigated = false;
@@ -87,6 +100,7 @@
     function render(s) {
       if (!s) return;
       if (s.message) statusEl.textContent = s.message;
+      if (phaseEl) phaseEl.textContent = PHASE_LABELS[s.phase] || '';
       if (typeof s.percent === 'number' && s.percent >= 0) {
         trackEl.classList.remove('indeterminate');
         fillEl.style.width = s.percent + '%';
@@ -96,11 +110,11 @@
         pctEl.textContent = '';
       }
       if (s.backend_url) backendUrl = s.backend_url;
-      if (s.can_continue) {
-        canContinue = true;
+      if (s.can_continue) canContinue = true;
+      if (s.ollama_done) {
+        ollamaDone = true;
         enterBtn.classList.add('show');
       }
-      if (s.ollama_done) ollamaDone = true;
       maybeNavigate();
     }
 
@@ -117,7 +131,7 @@
       if (!t || !t.event || !t.core) { return false; }
       pollStatus();
       t.event.listen('status', (e) => render(e.payload));
-      setInterval(pollStatus, 2000);
+      setInterval(pollStatus, 800);
       return true;
     }
     if (!initTauri()) {

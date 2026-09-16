@@ -14,11 +14,12 @@ Rust (src-tauri/src/main.rs) — genérico para todas las herramientas
   1. Elige un puerto libre.
   2. Lanza el backend empaquetado como "sidecar" (backend), pasándole
      PORT y DATA_DIR por variables de entorno.
-  3. Prepara Ollama (best-effort): serve + pull del modelo según RAM
-     (modelos definidos por herramienta en appconfig.json).
-  4. Muestra el progreso en la pantalla de carga y, al estar listo,
-     navega a http://127.0.0.1:<puerto>/ui/index.html (la UI real).
-  5. Al cerrar la app, detiene el backend.
+  3. Prepara Ollama (API HTTP, sin MSI): usa un Ollama de sistema ya
+     sano en 11434, o arranca un binario portable en la carpeta de datos
+     (%APPDATA%/SmartRedes/ollama o XDG), descargando zip/tgz oficial si
+     hace falta. El splash muestra descarga/extracción/arranque/pull de
+     llama3.1:8b y continúa **sin reiniciar**. Al cerrar, detiene el
+     sidecar y solo el Ollama que esta app arrancó.
         │
         ▼
 Backend FastAPI (server/app.py) empaquetado con PyInstaller
@@ -54,7 +55,9 @@ Todo lo específico de cada app vive en `desktop/smartsuite.config.json`:
 - Rust (stable) + Cargo.
 - Node 18+ (para la CLI de Tauri).
 - Linux: `libwebkit2gtk-4.1-dev`, `librsvg2-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `patchelf`, `build-essential` (ver CI).
-- **Ollama** NO se empaqueta: se instala/usa en la máquina del usuario (la app intenta prepararlo automáticamente si está presente).
+- **Ollama** no usa el MSI/instalador de sistema: si no hay un Ollama
+  sano en 11434, la app descarga el zip/tgz oficial portable a la carpeta
+  de datos del producto, lo arranca y hace pull de `llama3.1:8b` en el splash.
 
 ## Build local
 

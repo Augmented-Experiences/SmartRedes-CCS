@@ -30,7 +30,7 @@ winget install -e --id Microsoft.VisualStudio.2022.BuildTools
 - El backend se empaqueta con PyInstaller usando `requirements-desktop.txt` (subconjunto liviano). Las capacidades pesadas opcionales **no** se empaquetan:
   - **SmartRedes**: generación de imágenes por IA — eliminada (no va en ningún caso).
   - **SmartGastos**: OCR neuronal — se hace con un **modelo de visión de Ollama (`moondream`)** que se descarga con barra de progreso en el primer arranque, igual que el modelo del LLM.
-- La primera ejecución descarga el/los modelo(s) de Ollama con progreso; luego abre al instante.
+- La primera ejecución descarga Ollama portable (si hace falta) y `llama3.1:8b` con progreso en el splash; no requiere reiniciar ni el instalador MSI.
 
 ---
 
@@ -100,4 +100,4 @@ Si prefieres no usar el `.patch`, en cada repo (SmartRedes/SmartGastos):
 ## Problemas frecuentes
 - **`numpy ... Preparing metadata ... error`**: usas Python 3.13/3.14. Usa 3.12 (`py -3.12 -m venv venv`).
 - **`rustc no reconocido`**: instala Rust (rustup) y reabre la terminal; `rustup default stable-msvc`.
-- **La app abre pero la IA dice "desconectado"**: instala Ollama (https://ollama.com/download) y reinicia; la app descargará el/los modelo(s) con progreso.
+- **La app abre pero la IA dice "desconectado"**: no instales el MSI de Ollama. En el splash la app descarga el zip portable a `%APPDATA%\SmartRedes\ollama\`, arranca `serve` y hace pull de `llama3.1:8b` **sin reiniciar**. Si 11434 ya tenía un Ollama de sistema sano, se reutiliza y no se mata al salir.
