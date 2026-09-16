@@ -8,12 +8,13 @@
 
 :root {
   /* Colores de marca CCS y acento de SmartRedes. */
-  --ccs-azul-oscuro: #003DA6;
-  --ccs-azul: #0055B8;
-  --ccs-celeste: #0B71C8;
-  --ccs-verde: #39B54A;
-  --ccs-accent: #0FB5A6;
-  --ccs-accent-strong: #0A8F83;
+  --ccs-azul-oscuro: #002558;
+  --ccs-azul: #3A89DA;
+  --ccs-celeste: #3A89DA;
+  --ccs-verde: #00D53A;
+  --ccs-accent: #00D53A;
+  --ccs-accent-strong: #002558;
+  --ccs-gradient: linear-gradient(126.54deg, rgb(0, 215, 0) -3.03%, rgb(0, 86, 202) 56.75%);
 
   /* Neutros / superficies */
   --bg-base: #F7F8FA;
@@ -31,8 +32,8 @@
   --danger: #DC2626;
 
   --radius: 10px;
-  --shadow-sm: 0 1px 3px rgba(0, 61, 166, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 61, 166, 0.10);
+  --shadow-sm: 0 1px 3px rgba(0, 37, 88, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 37, 88, 0.10);
 }
 
 .ccs-accent-top {
@@ -44,7 +45,7 @@
 }
 
 .ccs-btn-primary {
-  background: linear-gradient(135deg, var(--ccs-accent), var(--ccs-accent-strong));
+  background: var(--ccs-gradient);
   color: #FFFFFF;
   border: 0;
   border-bottom: 2px solid var(--ccs-azul-oscuro);
@@ -65,5 +66,5 @@
   height: 4px;
   margin: 10px auto 0;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--ccs-azul-oscuro), var(--ccs-verde), var(--ccs-accent));
+  background: var(--ccs-gradient);
 }

@@ -9,14 +9,14 @@
 use std::io::{BufRead, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-use tauri::{Emitter, Manager, RunEvent};
+use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
@@ -57,6 +57,8 @@ fn product_name() -> &'static str {
 
 /// Proceso hijo del backend (para terminarlo al salir).
 struct BackendState(Mutex<Option<CommandChild>>);
+/// Proceso de Ollama iniciado por esta aplicación (nunca uno ya existente).
+struct OllamaState(Mutex<Option<Child>>);
 
 /// Estado compartido que se muestra en la pantalla de carga.
 #[derive(Clone, serde::Serialize)]
@@ -358,7 +360,14 @@ fn bootstrap_ollama(app: tauri::AppHandle, backend_port: u16) {
             ollama_log("Iniciando el servicio 'ollama serve'…");
             let mut cmd = ollama_command();
             cmd.arg("serve").stdout(Stdio::null()).stderr(Stdio::null());
-            let _ = cmd.spawn();
+            match cmd.spawn() {
+                Ok(child) => {
+                    app.state::<OllamaState>().0.lock().unwrap().replace(child);
+                }
+                Err(error) => {
+                    ollama_log(&format!("No se pudo iniciar 'ollama serve': {error}"));
+                }
+            }
             wait_for_port(11434, 30);
         }
         ollama_log("Servicio Ollama disponible.");
@@ -431,10 +440,22 @@ fn bootstrap_ollama(app: tauri::AppHandle, backend_port: u16) {
     });
 }
 
+/// Detiene únicamente los procesos cuya vida pertenece a esta instancia.
+fn shutdown_services(app: &tauri::AppHandle) {
+    if let Some(child) = app.state::<BackendState>().0.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+    if let Some(mut child) = app.state::<OllamaState>().0.lock().unwrap().take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(BackendState(Mutex::new(None)))
+        .manage(OllamaState(Mutex::new(None)))
         .manage(AppStatus(Mutex::new(Status::initial())))
         .invoke_handler(tauri::generate_handler![current_status])
         .setup(|app| {
@@ -485,10 +506,17 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error al construir la app de escritorio")
         .run(|app_handle, event| {
-            if let RunEvent::Exit = event {
-                if let Some(child) = app_handle.state::<BackendState>().0.lock().unwrap().take() {
-                    let _ = child.kill();
+            match event {
+                RunEvent::WindowEvent {
+                    event: WindowEvent::CloseRequested { api, .. },
+                    ..
+                } => {
+                    api.prevent_close();
+                    shutdown_services(app_handle);
+                    app_handle.exit(0);
                 }
+                RunEvent::Exit => shutdown_services(app_handle),
+                _ => {}
             }
         });
 }

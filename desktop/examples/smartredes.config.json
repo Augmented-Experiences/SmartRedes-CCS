@@ -4,7 +4,7 @@
   "identifier": "cl.ccs.smartredes",
   "version": "1.0.0",
   "dataDirName": "SmartRedes",
-  "accent": "#0FB5A6",
+  "accent": "#00D53A",
   "window": { "title": "SmartRedes", "width": 1280, "height": 840, "minWidth": 960, "minHeight": 640 },
   "splashSubtitle": "Preparando tu asistente de marca y redes con IA local...",
   "splashLogo": "../app/logo-ccs.svg",
