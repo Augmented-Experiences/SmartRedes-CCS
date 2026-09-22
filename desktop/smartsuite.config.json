@@ -6,7 +6,8 @@
   "accent": "#00D53A",
   "window": { "title": "SmartRedes", "width": 1280, "height": 840, "minWidth": 960, "minHeight": 640 },
   "splashSubtitle": "Preparando tu asistente de marca y redes con IA local...",
-  "splashLogo": "../app/logo-ccs.svg",
+  "splashLogo": "brand/ccs-mark.png",
+  "publisher": "Cámara de Comercio de Santiago",
   "shortDescription": "Asistente de marca/redes con IA local (CCS)",
   "longDescription": "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara de Comercio de Santiago (CCS).",
   "ollama": {

@@ -586,5 +586,26 @@ class TestCrossPlatform:
         assert _fix_encoding("Campaña de marketing") == "Campaña de marketing"
 
 
+class TestLauncherModel:
+    """El instalador Tauri elige modelo por RAM; el backend debe usarlo."""
+
+    def test_resolve_falls_back_to_launcher_model(self):
+        from app import resolve_ollama_model
+
+        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.2:3b"}, clear=False):
+            with patch("app._ollama_model_names", return_value=["llama3.2:3b"]):
+                assert resolve_ollama_model("llama3.1:8b") == "llama3.2:3b"
+
+    def test_resolve_keeps_requested_when_present(self):
+        from app import resolve_ollama_model
+
+        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.2:3b"}, clear=False):
+            with patch(
+                "app._ollama_model_names",
+                return_value=["llama3.1:8b", "llama3.2:3b"],
+            ):
+                assert resolve_ollama_model("llama3.1:8b") == "llama3.1:8b"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

@@ -13,6 +13,8 @@ use std::os::windows::process::CommandExt;
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+#[cfg(windows)]
+const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
 
 /// Text model SmartRedes already requires (`server/app.py` REQUIRED_MODEL).
 pub const TEXT_MODEL: &str = "llama3.1:8b";
@@ -550,7 +552,7 @@ pub fn ollama_command(binary: &Path) -> Command {
     #[allow(unused_mut)]
     let mut cmd = Command::new(binary);
     #[cfg(windows)]
-    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd.creation_flags(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP);
     cmd
 }
 

@@ -12,6 +12,7 @@
 // Se ejecuta automáticamente antes de 'npm run build' / 'npm run dev'.
 // ============================================================
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,6 +27,7 @@ function req(name) {
 }
 
 const productName = req("productName");
+const publisher = cfg.publisher || "Cámara de Comercio de Santiago";
 const version = cfg.version || "1.0.0";
 const identifier = req("identifier");
 const dataDirName = req("dataDirName");
@@ -72,6 +74,61 @@ function bundleTargetsForHost() {
 }
 
 const bundleTargets = bundleTargetsForHost();
+
+function rustHostTriple() {
+  try {
+    const out = execSync("rustc -vV", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const line = out.split("\n").find((l) => l.startsWith("host: "));
+    return line ? line.slice("host: ".length).trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function expectedSidecarRelative() {
+  const triple = rustHostTriple();
+  if (!triple) return null;
+  const ext = process.platform === "win32" ? ".exe" : "";
+  return `src-tauri/binaries/backend-${triple}${ext}`;
+}
+
+function assertSidecarForTauri() {
+  const rel = expectedSidecarRelative();
+  if (!rel) {
+    console.error("");
+    console.error("ERROR: no se pudo obtener el target de Rust (rustc -vV).");
+    console.error("       Instale Rust y reinicie la terminal: rustup default stable-msvc");
+    process.exit(1);
+  }
+  const full = resolve(DESKTOP, rel);
+  if (existsSync(full)) {
+    console.log(`configure.mjs: sidecar OK (${rel.replace(/\\/g, "/")})`);
+    return;
+  }
+  mkdirSync(resolve(DESKTOP, "src-tauri/binaries"), { recursive: true });
+  console.error("");
+  console.error("ERROR: Falta el sidecar del backend para Tauri (bundle.externalBin).");
+  console.error("");
+  console.error(`  Archivo esperado:`);
+  console.error(`    ${rel}`);
+  console.error("");
+  console.error("  Genérelo antes de npm run build (PyInstaller + copia a binaries/):");
+  if (process.platform === "win32") {
+    console.error(
+      "    powershell -ExecutionPolicy Bypass -File desktop\\scripts\\build-backend.ps1"
+    );
+    console.error("  Para MSI/NSIS en un solo paso:");
+    console.error(
+      "    powershell -ExecutionPolicy Bypass -File desktop\\scripts\\build-backend.ps1 -Installer"
+    );
+  } else {
+    console.error("    ./desktop/scripts/build-backend.sh");
+  }
+  process.exit(1);
+}
 
 // --- 1) tauri.conf.json ---
 const tauriConf = {
@@ -140,7 +197,7 @@ const cargoToml = `[package]
 name = "${pkg}"
 version = "${version}"
 description = "${cargoDescription.replace(/"/g, '\\"')}"
-authors = ["Cámara de Comercio de Santiago"]
+authors = ["${publisher.replace(/"/g, '\\"')}"]
 edition = "2021"
 rust-version = "1.77"
 
@@ -172,13 +229,21 @@ strip = true
 `;
 writeFileSync(resolve(DESKTOP, "src-tauri/Cargo.toml"), cargoToml);
 
-// --- 4) capabilities/default.json ---
+// --- 4) capabilities/default.json (sin $schema: gen/ no existe hasta el primer build) ---
 const capabilities = {
-  $schema: "../gen/schemas/desktop-schema.json",
   identifier: "default",
   description: `Permisos base para la ventana principal de ${productName}.`,
   windows: ["main"],
-  permissions: ["core:default"],
+  permissions: [
+    "core:default",
+    "core:webview:default",
+    "shell:allow-kill",
+    "shell:allow-stdin-write",
+    {
+      identifier: "shell:allow-spawn",
+      allow: [{ name: "backend", sidecar: true, args: true }],
+    },
+  ],
 };
 writeFileSync(
   resolve(DESKTOP, "src-tauri/capabilities/default.json"),
@@ -190,7 +255,10 @@ const pkgJsonPath = resolve(DESKTOP, "package.json");
 const pkgJson = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
 pkgJson.name = `${pkg}-desktop`;
 pkgJson.version = version;
-pkgJson.description = `Instalador/app de escritorio nativo de ${productName} (Tauri) — Cámara de Comercio de Santiago`;
+pkgJson.description = `Instalador/app de escritorio nativo de ${productName} (Tauri) — ${publisher}`;
+pkgJson.scripts = pkgJson.scripts || {};
+pkgJson.scripts.icon = "tauri icon brand/ccs-mark.png";
+pkgJson.scripts.build = "node scripts/configure.mjs && node scripts/tauri-build.mjs";
 writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + "\n");
 
 // --- 6) Splash UI ---
@@ -200,6 +268,14 @@ writeFileSync(
   resolve(DESKTOP, "ui/accent.css"),
   `/* Generado por configure.mjs — acento por-herramienta */\n:root { --ccs-accent: ${accent}; }\n`
 );
+
+const favSrc = [
+  resolve(DESKTOP, "..", "app", "favicon.ico"),
+  resolve(DESKTOP, "src-tauri", "icons", "icon.ico"),
+].find((p) => existsSync(p));
+if (favSrc) {
+  copyFileSync(favSrc, resolve(DESKTOP, "ui/favicon.ico"));
+}
 
 let logoHtml = "";
 const logoRel = cfg.splashLogo || "../icon.png";
@@ -271,3 +347,5 @@ try {
 console.log(
   `configure.mjs: '${productName}' (${pkg}) - accent ${accent}, dataDir ${dataDirName}, bundles [${bundleTargets.join(", ")}] (${process.platform})`
 );
+
+assertSidecarForTauri();

@@ -355,7 +355,7 @@ async def startup_event():
         config = {
             "version": "0.1.0",
             "created_at": datetime.utcnow().isoformat(),
-            "default_model": "llama3.1:8b",
+            "default_model": os.environ.get("OLLAMA_MODEL") or "llama3.1:8b",
             "ollama_url": OLLAMA_URL,
             "language": "es",
         }
@@ -363,6 +363,13 @@ async def startup_event():
 
     # Verificar modelos disponibles en Ollama y actualizar config si es necesario
     await _verify_and_fix_models()
+
+    if os.environ.get("RUN_BY_TAURI") == "1":
+        logger.info(
+            "RUN_BY_TAURI=1: Ollama lo gestiona el launcher. OLLAMA_URL=%s OLLAMA_MODEL=%s",
+            OLLAMA_URL,
+            os.environ.get("OLLAMA_MODEL") or os.environ.get("OLLAMA_DEFAULT_MODEL") or "",
+        )
 
     logger.info(f"CCS Brand Assistant iniciado. DATA_DIR={DATA_DIR}")
 
@@ -381,12 +388,109 @@ async def shutdown_event():
     logger.info("CCS Brand Assistant detenido. Recursos liberados.")
 
 
+def _ollama_model_names() -> list:
+    try:
+        resp = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
+        if resp.status_code != 200:
+            return []
+        return [m.get("name") for m in resp.json().get("models", []) if m.get("name")]
+    except Exception as e:
+        logger.warning("No se pudo leer %s/api/tags: %s", OLLAMA_URL, e)
+        return []
+
+
+def _model_name_matches(have: str, want: str) -> bool:
+    if not have or not want:
+        return False
+    if have == want:
+        return True
+    if have.startswith(want + "-") or have.startswith(want + ":"):
+        return True
+    if want.startswith(have + "-"):
+        return True
+    return False
+
+
+def _launcher_ollama_model() -> str:
+    env_model = (
+        os.environ.get("OLLAMA_MODEL")
+        or os.environ.get("OLLAMA_DEFAULT_MODEL")
+        or ""
+    ).strip()
+    if env_model:
+        return env_model
+    marker = DATA_DIR / "ollama" / "active_model.txt"
+    try:
+        if marker.is_file():
+            return marker.read_text(encoding="utf-8").strip()
+    except Exception:
+        pass
+    return ""
+
+
+def resolve_ollama_model(requested: str) -> str:
+    """Usa el modelo pedido si está en Ollama; si no, el que el launcher ya bajó.
+
+    Evita 404 cuando el splash descargó llama3.2:3b (RAM) y el agente pide llama3.1:8b.
+    """
+    names = _ollama_model_names()
+    env_model = _launcher_ollama_model()
+    want = (requested or "").strip()
+
+    if want:
+        for n in names:
+            if n == want:
+                return n
+        for n in names:
+            if _model_name_matches(n, want):
+                logger.info("Usando modelo %s (pedido %s)", n, want)
+                return n
+
+    if env_model:
+        for n in names:
+            if n == env_model or _model_name_matches(n, env_model):
+                if want and want != n:
+                    logger.warning(
+                        "Modelo de agente %s no está en /api/tags; usando %s (OLLAMA_MODEL)",
+                        want,
+                        n,
+                    )
+                return n
+        if not names:
+            logger.warning("/api/tags vacío; intentando modelo del launcher %s", env_model)
+            return env_model
+
+    if names:
+        logger.warning(
+            "Modelo de agente %s no está; usando %s (presente en /api/tags)",
+            want or "(vacío)",
+            names[0],
+        )
+        return names[0]
+
+    return want or env_model or "llama3.2:3b"
+
+
 async def _verify_and_fix_models():
-    """Verifica que el modelo configurado y llama3.1:8b existen en Ollama.
-    Si no existen, intenta descargarlos automáticamente (ollama pull).
-    Si Ollama no está disponible, lo ignora silenciosamente.
+    """Verifica que el modelo configurado exista en Ollama.
+
+    En el instalador Tauri (RUN_BY_TAURI=1) el launcher ya descargó el modelo
+    según RAM y lo pasa en OLLAMA_MODEL: no forzar un segundo pull de 8b.
     """
     try:
+        if os.environ.get("RUN_BY_TAURI") == "1":
+            launcher = _launcher_ollama_model()
+            logger.info(
+                "RUN_BY_TAURI=1: se omite pull automático del backend. OLLAMA_MODEL=%s",
+                launcher,
+            )
+            if launcher:
+                config_file = DATA_DIR / "config.json"
+                config = load_json(config_file, {})
+                config["default_model"] = launcher
+                save_json(config_file, config)
+            return
+
         resp = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
         if resp.status_code != 200:
             logger.warning("Ollama no disponible al inicio — se verificará cuando el usuario lo necesite")
@@ -786,6 +890,7 @@ def call_ollama(model: str, system_prompt: str, user_message: str,
 
     # Sanitizar el input del usuario contra inyección de prompts
     user_message = _sanitize_user_input(user_message)
+    model = resolve_ollama_model(model)
 
     # Resolver timeout: si no se pasó explícitamente, leer de config/env
     if timeout is None:
@@ -901,7 +1006,10 @@ def call_ollama(model: str, system_prompt: str, user_message: str,
 
 
 def get_active_model() -> str:
-    """Retorna el modelo activo configurado."""
+    """Retorna el modelo activo configurado (launcher Tauri o config.json)."""
+    launcher = _launcher_ollama_model()
+    if launcher:
+        return launcher
     config = load_json(DATA_DIR / "config.json", {})
     return config.get("default_model", "llama3.1:8b")
 

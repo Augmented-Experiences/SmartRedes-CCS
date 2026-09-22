@@ -12,13 +12,22 @@ use smartsuite_ollama as ollama_portable;
 use std::io::{BufRead, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
+
+/// En Windows evita consola al lanzar taskkill/netstat.
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+const SHUTDOWN_WAIT_ATTEMPTS: u32 = 25;
 
 // --- Config por-herramienta (generada por scripts/configure.mjs) ---
 #[derive(serde::Deserialize)]
@@ -34,9 +43,8 @@ struct AppConfig {
     product_name: String,
     data_dir_name: String,
     ollama_tiers: Vec<Tier>,
-    /// Reservado por el kit (SmartRedes de escritorio no descarga modelos de imagen).
+    /// Modelos extra (p. ej. visión). Vacío en SmartRedes; se respeta si el config los define.
     #[serde(default)]
-    #[allow(dead_code)]
     extra_models: Vec<String>,
 }
 
@@ -70,6 +78,8 @@ impl OwnedOllama {
 }
 
 struct OllamaState(Mutex<Option<OwnedOllama>>);
+struct ShutdownState(AtomicBool);
+struct BootstrapStarted(Mutex<Instant>);
 
 /// Estado compartido que se muestra en la pantalla de carga.
 #[derive(Clone, serde::Serialize)]
@@ -126,6 +136,13 @@ fn update_status(app: &tauri::AppHandle, f: impl FnOnce(&mut Status)) {
 #[tauri::command]
 fn current_status(state: tauri::State<AppStatus>) -> Status {
     state.0.lock().unwrap().clone()
+}
+
+fn hidden_command(program: impl AsRef<std::ffi::OsStr>) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
 }
 
 fn remember_owned_ollama(app: &tauri::AppHandle, owned: OwnedOllama) {
@@ -329,6 +346,39 @@ fn pull_model_with_progress(app: &tauri::AppHandle, agent: &ureq::Agent, port: u
         }
     }
     ok
+}
+
+fn ensure_model_pulled(app: &tauri::AppHandle, agent: &ureq::Agent, port: u16, model: &str) {
+    if ollama_portable::model_already_pulled(agent, port, model) {
+        update_status(app, |s| {
+            s.phase = "downloading".into();
+            s.message = format!("Modelo {model} listo.");
+            s.percent = 100;
+        });
+        ollama_log(&format!("Modelo '{model}' ya estaba descargado."));
+        return;
+    }
+    update_status(app, |s| {
+        s.phase = "downloading".into();
+        s.message = format!("Descargando el modelo {model} (solo la primera vez)…");
+        s.percent = -1;
+    });
+    if pull_model_with_progress(app, agent, port, model) {
+        ollama_log(&format!("Modelo '{model}' listo."));
+        update_status(app, |s| {
+            s.message = format!("Modelo {model} listo.");
+            s.percent = 100;
+        });
+    } else {
+        ollama_log(&format!("No se pudo descargar '{model}' automáticamente."));
+        update_status(app, |s| {
+            s.phase = "warning".into();
+            s.message = format!(
+                "No se pudo descargar {model} automáticamente; podrás reintentar desde la app."
+            );
+            s.percent = -1;
+        });
+    }
 }
 
 fn wait_for_ollama_api(agent: &ureq::Agent, port: u16, attempts: u32) -> bool {
@@ -546,42 +596,17 @@ fn bootstrap_ollama(app: tauri::AppHandle, backend_port: u16) {
 
         if ready {
             ollama_log("Servicio Ollama disponible (API HTTP).");
-            let ram_hint = model_for_ram();
-            let model = ollama_portable::TEXT_MODEL.to_string();
-            if ram_hint != model {
-                ollama_log(&format!(
-                    "RAM sugeriría {ram_hint}; SmartRedes usa el modelo de texto {model}."
-                ));
+            let model = model_for_ram();
+            ensure_model_pulled(&app, &agent, port, &model);
+            let marker = ollama_portable::ollama_home(&data_dir).join("active_model.txt");
+            if let Some(parent) = marker.parent() {
+                let _ = std::fs::create_dir_all(parent);
             }
-            if ollama_portable::model_already_pulled(&agent, port, &model) {
-                update_status(&app, |s| {
-                    s.phase = "downloading".into();
-                    s.message = format!("Modelo {model} listo.");
-                    s.percent = 100;
-                });
-            } else {
-                update_status(&app, |s| {
-                    s.phase = "downloading".into();
-                    s.message = format!("Descargando el modelo {model} (solo la primera vez)…");
-                    s.percent = -1;
-                });
-                let ok = pull_model_with_progress(&app, &agent, port, &model);
-                if ok {
-                    ollama_log(&format!("Modelo '{model}' listo."));
-                    update_status(&app, |s| {
-                        s.message = format!("Modelo {model} listo.");
-                        s.percent = 100;
-                    });
-                } else {
-                    ollama_log(&format!("No se pudo descargar '{model}' automáticamente."));
-                    update_status(&app, |s| {
-                        s.phase = "warning".into();
-                        s.message = format!(
-                            "No se pudo descargar {model} automáticamente; podrás reintentar desde la app."
-                        );
-                        s.percent = -1;
-                    });
-                }
+            let _ = std::fs::write(&marker, format!("{model}\n"));
+            ollama_log(&format!("Modelo activo (RAM): {model}"));
+
+            for extra in &app_config().extra_models {
+                ensure_model_pulled(&app, &agent, port, extra);
             }
         }
 
@@ -599,10 +624,92 @@ fn bootstrap_ollama(app: tauri::AppHandle, backend_port: u16) {
     });
 }
 
-/// Detiene el sidecar y únicamente el Ollama que esta instancia arrancó.
+/// Mata listeners huérfanos (uvicorn hijo de PyInstaller) en el puerto del sidecar.
+fn kill_listeners_on_port(port: u16) {
+    #[cfg(windows)]
+    {
+        let Ok(output) = hidden_command("netstat")
+            .args(["-ano", "-p", "tcp"])
+            .output()
+        else {
+            return;
+        };
+        let text = String::from_utf8_lossy(&output.stdout);
+        let port_s = port.to_string();
+        let mut pids = std::collections::BTreeSet::new();
+        for line in text.lines() {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            if cols.len() < 5 || !cols.iter().any(|c| *c == "LISTENING") {
+                continue;
+            }
+            let local = cols[1];
+            let local_port = local.rsplit(':').next().unwrap_or("");
+            if local_port != port_s {
+                continue;
+            }
+            if let Ok(pid) = cols[cols.len() - 1].parse::<u32>() {
+                if pid > 0 {
+                    pids.insert(pid);
+                }
+            }
+        }
+        for pid in pids {
+            ollama_portable::kill_owned_pid(pid);
+        }
+    }
+    #[cfg(unix)]
+    {
+        if let Ok(output) = hidden_command("lsof")
+            .args(["-iTCP", &format!(":{port}"), "-sTCP:LISTEN", "-t"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                if let Ok(pid) = line.trim().parse::<u32>() {
+                    if pid > 0 {
+                        ollama_portable::kill_owned_pid(pid);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn wait_pid_gone(pid: u32) {
+    for _ in 0..SHUTDOWN_WAIT_ATTEMPTS {
+        if !ollama_portable::pid_is_running(pid) {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    ollama_log(&format!(
+        "WARNING: el proceso {pid} sigue vivo tras esperar el cierre"
+    ));
+}
+
+fn ignore_stale_early_close(app: &tauri::AppHandle) -> bool {
+    let started = *app.state::<BootstrapStarted>().0.lock().unwrap();
+    started.elapsed() < Duration::from_secs(2)
+}
+
+/// Detiene el sidecar (árbol PyInstaller/uvicorn) y únicamente el Ollama propio.
 fn shutdown_services(app: &tauri::AppHandle) {
+    if app.state::<ShutdownState>().0.swap(true, Ordering::AcqRel) {
+        return;
+    }
+    ollama_log("shutdown_services: cerrando sidecar y Ollama propio");
+    let backend_port = app.try_state::<BackendPort>().map(|port| port.0);
     if let Some(child) = app.state::<BackendState>().0.lock().unwrap().take() {
+        let pid = child.pid();
+        ollama_log(&format!("Deteniendo sidecar backend (PID {pid})."));
+        ollama_portable::kill_owned_pid(pid);
+        if let Some(port) = backend_port {
+            kill_listeners_on_port(port);
+        }
         let _ = child.kill();
+        wait_pid_gone(pid);
+    } else if let Some(port) = backend_port {
+        kill_listeners_on_port(port);
     }
     if let Some(owned) = app.state::<OllamaState>().0.lock().unwrap().take() {
         let pid = owned.pid();
@@ -619,8 +726,10 @@ fn shutdown_services(app: &tauri::AppHandle) {
                 }
             }
         }
+        wait_pid_gone(pid);
         ollama_portable::clear_owned_pid(&user_data_dir());
     }
+    ollama_log("shutdown_services: listo");
 }
 
 fn main() {
@@ -628,26 +737,46 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .manage(BackendState(Mutex::new(None)))
         .manage(OllamaState(Mutex::new(None)))
+        .manage(ShutdownState(AtomicBool::new(false)))
+        .manage(BootstrapStarted(Mutex::new(Instant::now())))
         .manage(AppStatus(Mutex::new(Status::initial())))
         .invoke_handler(tauri::generate_handler![current_status])
         .setup(|app| {
             let handle = app.handle().clone();
+            *handle.state::<BootstrapStarted>().0.lock().unwrap() = Instant::now();
             let port = pick_port();
             app.manage(BackendPort(port));
 
             // 1) Lanzar el backend empaquetado (sidecar), pasándole el puerto y la
             //    carpeta de datos por entorno (compatible con las apps del SmartSuite).
             let data_dir = user_data_dir().to_string_lossy().to_string();
+            let ollama_models = ollama_portable::models_dir(&user_data_dir())
+                .to_string_lossy()
+                .to_string();
+            let ram_model = model_for_ram();
+            ollama_log(&format!(
+                "sidecar env OLLAMA_URL={} OLLAMA_MODEL={}",
+                ollama_portable::api_base(ollama_portable::DEFAULT_PORT),
+                ram_model
+            ));
             let (mut rx, child) = app
                 .shell()
                 .sidecar("backend")
                 .expect("no se encontró el sidecar 'backend'")
                 .env("PORT", port.to_string())
                 .env("DATA_DIR", data_dir)
+                .env("RUN_BY_TAURI", "1")
+                .env("PYTHONIOENCODING", "utf-8")
                 .env(
                     "OLLAMA_URL",
                     ollama_portable::api_base(ollama_portable::DEFAULT_PORT),
                 )
+                .env(
+                    "OLLAMA_HOST",
+                    format!("127.0.0.1:{}", ollama_portable::DEFAULT_PORT),
+                )
+                .env("OLLAMA_MODELS", ollama_models)
+                .env("OLLAMA_MODEL", ram_model)
                 .spawn()
                 .expect("no se pudo iniciar el backend");
             app.state::<BackendState>()
@@ -660,7 +789,7 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 while let Some(event) = rx.recv().await {
                     if let CommandEvent::Stderr(bytes) | CommandEvent::Stdout(bytes) = event {
-                        let _ = String::from_utf8_lossy(&bytes);
+                        ollama_log(&String::from_utf8_lossy(&bytes));
                     }
                 }
             });
@@ -683,15 +812,27 @@ fn main() {
         .expect("error al construir la app de escritorio")
         .run(|app_handle, event| {
             match event {
-                RunEvent::WindowEvent {
-                    event: WindowEvent::CloseRequested { api, .. },
-                    ..
-                } => {
-                    api.prevent_close();
+                RunEvent::ExitRequested { .. } => {
                     shutdown_services(app_handle);
-                    app_handle.exit(0);
                 }
                 RunEvent::Exit => shutdown_services(app_handle),
+                RunEvent::WindowEvent { label, event, .. } if label == "main" => match event {
+                    WindowEvent::CloseRequested { api, .. } => {
+                        if ignore_stale_early_close(app_handle) {
+                            api.prevent_close();
+                            ollama_log("CloseRequested temprano ignorado (arranque)");
+                            return;
+                        }
+                        api.prevent_close();
+                        shutdown_services(app_handle);
+                        app_handle.exit(0);
+                    }
+                    WindowEvent::Destroyed => {
+                        shutdown_services(app_handle);
+                        app_handle.exit(0);
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         });

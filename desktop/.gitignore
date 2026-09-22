@@ -14,3 +14,9 @@ node_modules/
 
 # Logo de splash copiado por configure.mjs
 ui/splash-logo.png
+ui/splash-logo.svg
+ui/favicon.ico
+
+# Logs de npm run build
+tauri-build.log
+cargo-build.log
