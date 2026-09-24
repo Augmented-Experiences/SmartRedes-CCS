@@ -1045,6 +1045,7 @@
     <div class="page active" id="page-dashboard">
       <!-- Readiness Banner -->
       <div id="readinessBanner"></div>
+      <div id="ramWarnBanner"></div>
       <div class="grid-4" style="margin-bottom:20px">
         <div class="stat-card">
           <div class="stat-label">Marcas registradas</div>
@@ -3471,9 +3472,7 @@ function renderPubEditor(pub) {
 
   // Selector de modelo de texto + estado
   html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">';
-  html += '<select id="editTextModel" style="font-size:12px;flex:1;min-width:160px" onchange="_onTextModelChange(this.value)">';
-  html += '<option value="">Cargando modelos...</option>';
-  html += '</select>';
+  html += '<input id="editTextModel" value="Modelo del perfil" disabled style="font-size:12px;flex:1;min-width:160px" />';
   html += '<span id="textModelStatus" style="font-size:10px;color:var(--text-muted);white-space:nowrap"></span>';
   html += '</div>';
 
@@ -3630,7 +3629,6 @@ function regeneratePub(pubId) {
  * Llamado desde el botón del panel de texto.
  */
 function generateTextWithAI(pubId) {
-  var model = (document.getElementById('editTextModel') || {}).value || '';
   var instruction = (document.getElementById('editGenInstruction') || {}).value || '';
   var language = (document.getElementById('editGenLanguage') || {}).value || 'es';
 
@@ -3641,7 +3639,6 @@ function generateTextWithAI(pubId) {
     target: 'text',
     instruction: instruction,
     language: language,
-    model: model || undefined,
   };
 
   fetch(apiUrl('/campaigns/' + state.activeCampaign.id + '/publications/' + pubId + '/regenerate'), {
@@ -3783,7 +3780,6 @@ function generateWithAI(pubId) {
   var params = [];
   if (instruction) params.push('instruction=' + encodeURIComponent(instruction));
   if (language) params.push('language=' + encodeURIComponent(language));
-  if (textModel) params.push('model=' + encodeURIComponent(textModel));
   if (params.length > 0) url2 += '?' + params.join('&');
   fetch(url2, {method: 'POST'})
     .then(function(r) { return r.json(); })
@@ -3816,53 +3812,18 @@ function copyPubText() {
  * También selecciona el modelo activo configurado.
  */
 function _loadTextModels() {
-  var sel = document.getElementById('editTextModel');
   var statusEl = document.getElementById('textModelStatus');
-  if (!sel) return;
-
   fetch(apiUrl('/ollama/status'))
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var models = data.models || [];
-      var activeModel = (window._activeTextModel || '');
-
-      // Obtener modelo activo de config si no está en memoria
-      return fetch(apiUrl('/config'))
-        .then(function(r) { return r.json(); })
-        .then(function(cfg) {
-          activeModel = cfg.default_model || (models.length > 0 ? models[0] : '');
-          window._activeTextModel = activeModel;
-
-          if (models.length === 0) {
-            sel.innerHTML = '<option value="">Sin modelos instalados en Ollama</option>';
-            if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444">⚠️ Ollama sin modelos</span>';
-            return;
-          }
-
-          // Filtrar modelos de imagen (no texto) del selector de texto
-          var imageModelPatterns = /image|flux|dall|sdxl|stable.diff|lcm|turbo.*img/i;
-          var textModels = models.filter(function(m) { return !imageModelPatterns.test(m); });
-          if (textModels.length === 0) textModels = models; // fallback: mostrar todos
-
-          var optHtml = '';
-          for (var i = 0; i < textModels.length; i++) {
-            var m = textModels[i];
-            var selected = (m === activeModel || m.split(':')[0] === activeModel.split(':')[0]) ? ' selected' : '';
-            optHtml += '<option value="' + m + '"' + selected + '>' + m + '</option>';
-          }
-          sel.innerHTML = optHtml;
-
-          if (statusEl) {
-            var available = data.available;
-            statusEl.innerHTML = available
-              ? '<span style="color:var(--ccs-verde)">✅ Ollama activo</span>'
-              : '<span style="color:#ef4444">❌ Ollama no disponible</span>';
-          }
-        });
+      if (statusEl) {
+        statusEl.innerHTML = data.available
+          ? '<span style="color:var(--ccs-verde)">Ollama activo</span>'
+          : '<span style="color:#ef4444">Ollama no disponible</span>';
+      }
     })
     .catch(function() {
-      sel.innerHTML = '<option value="">Error al cargar modelos</option>';
-      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444">❌ Error</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444">Error</span>';
     });
 }
 
@@ -4159,7 +4120,8 @@ function renderAgents(agents) {
     html += '<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">';
     html += '<div>';
     html += '<label>Modelo</label>';
-    html += '<input type="text" id="model_' + agentId + '" value="' + escapeHtml(a.model || '') + '" style="width:220px" />';
+    html += '<input type="text" id="model_' + agentId + '" value="Modelo del perfil" disabled style="width:220px" />';
+    html += '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Visión: ' + escapeHtml(a.vision || 'no disponible en este perfil') + '</div>';
     html += '</div>';
     html += '<div>';
     html += '<label>Temperatura</label>';
@@ -4244,13 +4206,10 @@ var _pullPollingIntervals = {};
 
 function saveAgentPrompt(agentId) {
   var promptEl = document.getElementById('prompt_' + agentId);
-  var modelEl  = document.getElementById('model_' + agentId);
   var tempEl   = document.getElementById('temp_' + agentId);
   if (!promptEl) return;
 
-  var newModel = modelEl ? modelEl.value.trim() : '';
   var payload  = {agent_id: agentId, system_prompt: promptEl.value};
-  if (modelEl)  payload.model       = newModel;
   if (tempEl)   payload.temperature = parseFloat(tempEl.value) || 0.7;
 
   fetch(apiUrl('/agents/' + agentId), {
@@ -4259,27 +4218,8 @@ function saveAgentPrompt(agentId) {
     body: JSON.stringify(payload),
   })
     .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var pullStatus = data.pull_status;
-      if (pullStatus && (pullStatus.status === 'pulling' || pullStatus.status === 'queued')) {
-        // El modelo se está descargando — mostrar notificación persistente y polling
-        showNotification(
-          '&#8987; Descargando modelo <strong>' + escapeHtml(newModel) + '</strong>... ' +
-          'Esto puede tardar varios minutos. El agente estará listo cuando termine.',
-          'info'
-        );
-        _startPullPolling(agentId, newModel);
-      } else if (data.model_pull_status === 'pulling') {
-        // Alternativa: campo en el agente
-        showNotification(
-          '&#8987; Descargando modelo <strong>' + escapeHtml(newModel) + '</strong>... ' +
-          'Esto puede tardar varios minutos.',
-          'info'
-        );
-        _startPullPolling(agentId, newModel);
-      } else {
-        showNotification('Agente "' + agentId + '" actualizado correctamente', 'success');
-      }
+    .then(function() {
+      showNotification('Agente "' + agentId + '" actualizado correctamente', 'success');
     })
     .catch(function(e) {
       showNotification('Error: ' + e.message, 'error');
@@ -4776,12 +4716,31 @@ function hideGlobalLoading() {
 // ============================================================
 // READINESS CHECK
 // ============================================================
+function renderRamWarning(data) {
+  var el = document.getElementById('ramWarnBanner');
+  if (!el) return;
+  var access = data && data.access ? data.access : {};
+  if (access.level !== 'warn') {
+    el.innerHTML = '';
+    return;
+  }
+  var ram = (typeof access.ram_gb === 'number') ? access.ram_gb.toFixed(1) + ' GB' : 'poca RAM';
+  el.innerHTML = '<div class="readiness-banner not-ready" style="margin-top:8px">' +
+    '<div class="readiness-icon">&#9888;</div>' +
+    '<div class="readiness-text">' +
+    '<div class="readiness-title">Perfil Estándar</div>' +
+    '<div class="readiness-detail">Este equipo tiene ' + escapeHtml(ram) +
+    '. SmartRedes usa un modelo compacto. Cierra Chrome o Teams mientras generas; los textos largos tardan más.</div>' +
+    '</div></div>';
+}
+
 function checkReadiness() {
   fetch(apiUrl('/readiness'))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var banner = document.getElementById('readinessBanner');
       if (!banner) return;
+      renderRamWarning(data);
 
       if (data.ready) {
         banner.innerHTML = '<div class="readiness-banner ready">' +

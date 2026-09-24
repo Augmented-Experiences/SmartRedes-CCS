@@ -1,7 +1,7 @@
 {
   "productName": "SmartRedes",
   "identifier": "cl.ccs.smartredes",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "dataDirName": "SmartRedes",
   "accent": "#00D53A",
   "window": { "title": "SmartRedes", "width": 1280, "height": 840, "minWidth": 960, "minHeight": 640 },
@@ -12,11 +12,13 @@
   "longDescription": "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara de Comercio de Santiago (CCS).",
   "ollama": {
     "tiers": [
-      { "maxRamGb": 6, "model": "llama3.2:1b" },
-      { "maxRamGb": 12, "model": "llama3.2:3b" },
-      { "maxRamGb": 0, "model": "llama3.1:8b" }
+      { "maxRamGb": 7, "id": "liviano", "label": "Liviano", "model": "llama3.2:1b", "extraModels": [] },
+      { "maxRamGb": 13, "id": "estandar", "label": "Estándar", "model": "llama3.2:3b", "extraModels": [] },
+      { "maxRamGb": 24, "id": "completo", "label": "Completo", "model": "llama3.2:3b", "extraModels": [] },
+      { "maxRamGb": 0, "id": "maximo", "label": "Máximo", "model": "llama3.1:8b", "extraModels": [] }
     ]
   },
+  "access": { "blockBelowGb": 7, "warnBelowGb": 13 },
   "pyinstaller": {
     "excludes": ["torch", "torchvision", "torchaudio", "diffusers", "transformers", "accelerate", "safetensors", "tokenizers", "huggingface_hub", "playwright", "scipy"]
   }

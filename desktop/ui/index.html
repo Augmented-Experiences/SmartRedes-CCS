@@ -100,6 +100,15 @@
 
     function render(s) {
       if (!s) return;
+      if ((s.phase || '') === 'blocked') {
+        trackEl.classList.remove('indeterminate');
+        fillEl.style.width = '0%';
+        pctEl.textContent = '';
+        statusEl.textContent = s.message || 'Este equipo no cumple el mínimo de 8 GB de RAM.';
+        if (phaseEl) phaseEl.textContent = '';
+        enterBtn.classList.remove('show');
+        return;
+      }
       if (s.message) statusEl.textContent = s.message;
       if (phaseEl) phaseEl.textContent = PHASE_LABELS[s.phase] || '';
       if (typeof s.percent === 'number' && s.percent >= 0) {

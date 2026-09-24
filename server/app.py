@@ -428,14 +428,35 @@ def _launcher_ollama_model() -> str:
     return ""
 
 
-def resolve_ollama_model(requested: str) -> str:
-    """Usa el modelo pedido si está en Ollama; si no, el que el launcher ya bajó.
+def _is_vision_name(name: str) -> bool:
+    n = (name or "").lower()
+    return "moondream" in n or "llava" in n or "vision" in n
 
-    Evita 404 cuando el splash descargó llama3.2:3b (RAM) y el agente pide llama3.1:8b.
+
+def _desktop_pins_profile_model() -> bool:
+    if os.environ.get("RUN_BY_TAURI") == "1":
+        return True
+    return bool(getattr(sys, "frozen", False))
+
+
+def resolve_ollama_model(requested: str) -> str:
+    """En desktop usa OLLAMA_MODEL aunque haya otro modelo instalado.
+
+    Fuera del instalador, si el modelo pedido está en Ollama se respeta.
     """
     names = _ollama_model_names()
     env_model = _launcher_ollama_model()
     want = (requested or "").strip()
+    if want.lower() in ("perfil", "auto", "modelo del perfil"):
+        want = ""
+
+    if _desktop_pins_profile_model() and env_model and not _is_vision_name(want):
+        for n in names:
+            if n == env_model or _model_name_matches(n, env_model):
+                if want and want != n:
+                    logger.info("Desktop: agente pidió %s; se usa el perfil %s", want, n)
+                return n
+        return env_model
 
     if want:
         for n in names:
@@ -1291,6 +1312,13 @@ def check_readiness():
             "pulls": active_pulls,
         })
 
+    from hardware_profile import load_active_profile
+
+    profile = load_active_profile(str(DATA_DIR)) or {}
+    access_level = profile.get("access") or "ok"
+    if access_level not in ("block", "warn", "ok"):
+        access_level = "ok"
+
     return {
         "ready": ready and not active_pulls,
         "ollama_available": ollama_ok,
@@ -1298,6 +1326,17 @@ def check_readiness():
         "models": models,
         "active_pulls": active_pulls,
         "issues": issues,
+        "access": {
+            "level": access_level,
+            "ram_gb": profile.get("ramGb"),
+        },
+        "profile": {
+            "id": profile.get("id") or "",
+            "label": profile.get("label") or "",
+            "model": profile.get("model") or "",
+            "extra_models": profile.get("extraModels") or [],
+        },
+        "vision": "no disponible en este perfil",
     }
 
 
@@ -4751,6 +4790,9 @@ def list_agents():
                 skill_contents[skill_name] = ""  # skill no encontrado en disco
 
         agent["skill_contents"] = skill_contents
+        agent["model_locked"] = True
+        agent["model_label"] = "Modelo del perfil"
+        agent["vision"] = "no disponible en este perfil"
 
     return agents_data
 
@@ -4771,7 +4813,12 @@ def update_agent(agent_id: str, update: AgentConfigUpdate):
                 prompt_file = DATA_DIR / "prompts" / "system" / f"{agent_id}.md"
                 prompt_file.write_text(update.system_prompt, encoding="utf-8")
                 agent["system_prompt"] = update.system_prompt
-            if update.model is not None:
+            if update.model is not None and os.environ.get("RUN_BY_TAURI") == "1":
+                logger.info(
+                    "Agente '%s': se ignora el cambio de modelo en desktop; se usa el perfil de RAM",
+                    agent_id,
+                )
+            elif update.model is not None:
                 old_model = agent.get("model", "")
                 new_model = update.model
                 agent["model"] = new_model
