@@ -2263,12 +2263,15 @@ def get_adn(brand_id: str):
     """Retorna el ADN activo de una marca (draft o aprobado)."""
     # Primero buscar ADN aprobado
     adn_file = DATA_DIR / "brands" / brand_id / "adn.json"
-    if adn_file.exists():
-        return load_json(adn_file)
-    # Fallback: borrador
     draft_file = DATA_DIR / "brands" / brand_id / "adn_draft.json"
-    if draft_file.exists():
-        return load_json(draft_file)
+    approved = load_json(adn_file) if adn_file.exists() else None
+    draft = load_json(draft_file) if draft_file.exists() else None
+    if draft and draft.get("status") != "approved":
+        return draft
+    if approved:
+        return approved
+    if draft:
+        return draft
     raise HTTPException(status_code=404, detail="ADN no encontrado. Primero analiza el sitio web.")
 
 
@@ -2298,6 +2301,7 @@ def update_adn_field(brand_id: str, update: ADNUpdate):
         raise HTTPException(status_code=404, detail="ADN no encontrado")
 
     adn["fields"][update.field] = update.value
+    adn["status"] = "draft"
     adn["last_edited_at"] = datetime.utcnow().isoformat()
     adn["edit_history"] = adn.get("edit_history", [])
     adn["edit_history"].append({
@@ -2333,6 +2337,7 @@ def approve_adn(brand_id: str):
     versions_dir.mkdir(parents=True, exist_ok=True)
     version_num = len(list(versions_dir.glob("*.json"))) + 1
     draft["version"] = f"{version_num}.0"
+    save_json(draft_file, draft)
     save_json(current_adn_file, draft)
 
     # Actualizar estado de la marca
@@ -4690,8 +4695,8 @@ Responde ÚNICAMENTE con el JSON válido, sin texto adicional."""
 # RUTAS: Agentes y Configuración
 # ---------------------------------------------------------------------------
 @app.get("/api/stats")
-def get_stats():
-    """Retorna estadísticas globales del sistema: marcas, ADN, campañas y publicaciones."""
+def get_stats(brand_id: Optional[str] = None):
+    """Retorna estadísticas del sistema, de todas las marcas o de una sola."""
     # Leer marcas desde los archivos individuales brand.json (fuente de verdad),
     # NO desde un brands.json centralizado que no se actualiza en tiempo real.
     brands = []
@@ -4702,6 +4707,8 @@ def get_stats():
             if brand:
                 brands.append(brand)
 
+    if brand_id:
+        brands = [b for b in brands if b.get("id") == brand_id]
     total_brands = len(brands)
     adn_complete = sum(1 for b in brands if b.get("onboarding_status") == "complete")
 
@@ -4722,6 +4729,8 @@ def get_stats():
             if not camp_file.exists():
                 continue
             camp = load_json(camp_file, {})
+            if brand_id and camp.get("brand_id") != brand_id:
+                continue
             total_campaigns += 1
             if len(recent_campaigns) < 5:
                 recent_campaigns.append({
@@ -4847,6 +4856,38 @@ def update_agent(agent_id: str, update: AgentConfigUpdate):
             return agent
 
     raise HTTPException(status_code=404, detail="Agente no encontrado")
+
+
+class SkillCreate(BaseModel):
+    name: str
+
+
+@app.post("/api/agents/{agent_id}/skills")
+def add_agent_skill(agent_id: str, body: SkillCreate):
+    """Agrega un skill vacío al agente y crea su archivo .md."""
+    import re
+    name = re.sub(r"[^a-z0-9_]", "", (body.name or "").strip().lower().replace(" ", "_").replace("-", "_"))
+    if not name:
+        raise HTTPException(status_code=400, detail="Nombre de skill no válido")
+    agents_file = DATA_DIR / "agents" / "agents.json"
+    agents_data = load_json(agents_file, {"agents": []})
+    found = None
+    for agent in agents_data.get("agents", []):
+        if agent.get("id") == agent_id:
+            found = agent
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="Agente no encontrado")
+    skills = found.setdefault("skills", [])
+    if name not in skills:
+        skills.append(name)
+        save_json(agents_file, agents_data)
+    skills_dir = DATA_DIR / "prompts" / "skills"
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = skills_dir / f"{name}.md"
+    if not skill_file.exists():
+        skill_file.write_text("# " + name + "\n\n", encoding="utf-8")
+    return {"ok": True, "skill": name, "agent_id": agent_id}
 
 
 @app.get("/api/skills")

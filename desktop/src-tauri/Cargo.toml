@@ -1,6 +1,6 @@
 [package]
 name = "smartredes"
-version = "1.1.0"
+version = "1.1.1"
 description = "SmartRedes — asistente de marca y redes con IA local para PYMEs, de la Cámara de Comercio de Santiago (CCS)."
 authors = ["Cámara de Comercio de Santiago"]
 edition = "2021"

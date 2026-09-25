@@ -209,7 +209,17 @@
       font-weight: 700;
       box-shadow: inset 3px 0 0 var(--ccs-verde), 0 2px 8px rgba(15,181,166,0.35);
     }
-    .nav-item .nav-icon { width: 18px; text-align: center; font-size: 14px; }
+    .nav-item .nav-icon { width: 18px; text-align: center; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--ccs-azul); }
+    .nav-item .nav-icon svg { width: 16px; height: 16px; }
+    .nav-item.active .nav-icon { color: #fff; }
+    .field-help { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+    .tour-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 37, 88, 0.45); z-index: 80; }
+    .tour-overlay.open { display: block; }
+    .tour-card { position: fixed; width: min(380px, calc(100vw - 48px)); background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); }
+    .tour-step { font-size: 11px; font-weight: 700; color: var(--ccs-azul); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; }
+    .tour-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+    .tour-body { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px; }
+    .tour-actions { display: flex; gap: 8px; justify-content: flex-end; }
     .nav-badge {
       margin-left: auto;
       background: var(--ccs-verde);
@@ -988,10 +998,10 @@
     <div class="sidebar-section">
       <div class="sidebar-section-label">Principal</div>
       <div class="nav-item active" onclick="navigateTo('dashboard')" id="nav-dashboard">
-        <span class="nav-icon">&#9632;</span> Dashboard
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span> Dashboard
       </div>
       <div class="nav-item" onclick="navigateTo('brands')" id="nav-brands">
-        <span class="nav-icon">&#9670;</span> Marcas
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg></span> Marcas
         <span class="nav-badge" id="brandsBadge">0</span>
       </div>
     </div>
@@ -999,29 +1009,29 @@
     <div class="sidebar-section" id="brandSection" style="display:none">
       <div class="sidebar-section-label" id="activeBrandLabel">Marca activa</div>
       <div class="nav-item" onclick="navigateTo('adn')" id="nav-adn">
-        <span class="nav-icon">&#9670;</span> ADN de Marca
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span> ADN de Marca
       </div>
       <div class="nav-item" onclick="navigateTo('interview')" id="nav-interview">
-        <span class="nav-icon">&#9670;</span> Entrevista IA
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> Entrevista IA
       </div>
       <div class="nav-item" onclick="navigateTo('campaigns')" id="nav-campaigns">
-        <span class="nav-icon">&#9670;</span> Campañas
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11v2a2 2 0 0 0 2 2h2l5 4V5L8 9H6a2 2 0 0 0-2 2z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></span> Campañas
       </div>
       <div class="nav-item" onclick="navigateTo('calendar')" id="nav-calendar">
-        <span class="nav-icon">&#9670;</span> Calendario
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span> Calendario
       </div>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-section-label">Sistema</div>
       <div class="nav-item" onclick="navigateTo('agents')" id="nav-agents">
-        <span class="nav-icon">&#9670;</span> Agentes IA
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 4h6M9 14h.01M15 14h.01"/></svg></span> Agentes IA
       </div>
       <div class="nav-item" onclick="navigateTo('audit')" id="nav-audit">
-        <span class="nav-icon">&#9670;</span> Auditoría
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></span> Auditoría
       </div>
       <div class="nav-item" onclick="navigateTo('exportimport')" id="nav-exportimport">
-        <span class="nav-icon">&#8645;</span> Exportar / Importar
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg></span> Exportar / Importar
       </div>
     </div>
 
@@ -1046,6 +1056,12 @@
       <!-- Readiness Banner -->
       <div id="readinessBanner"></div>
       <div id="ramWarnBanner"></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:12px">
+        <label for="dashBrandFilter" style="font-size:12px;color:var(--text-muted);margin:0">Estadísticas de</label>
+        <select id="dashBrandFilter" onchange="loadDashboardStats()" style="width:auto;min-width:200px;font-size:13px">
+          <option value="">Todas las marcas</option>
+        </select>
+      </div>
       <div class="grid-4" style="margin-bottom:20px">
         <div class="stat-card">
           <div class="stat-label">Marcas registradas</div>
@@ -1102,6 +1118,7 @@
               <div class="card-title">Comenzar</div>
               <div class="card-subtitle">Pasos para tu primera marca</div>
             </div>
+            <button class="btn btn-sm btn-primary" onclick="startProductTour(true)">Ver guía</button>
           </div>
           <div style="display:flex;flex-direction:column;gap:12px">
             <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-base);border-radius:8px;border:1px solid var(--border)">
@@ -1110,7 +1127,7 @@
                 <div style="font-size:13px;font-weight:600">Crear una marca</div>
                 <div style="font-size:11px;color:var(--text-muted)">Registra el nombre y sitio web de tu empresa</div>
               </div>
-              <button class="btn btn-sm btn-primary" style="margin-left:auto" onclick="navigateTo('brands')">Ir</button>
+              <button class="btn btn-sm btn-primary" style="margin-left:auto" onclick="startProductTour(true)">Ir</button>
             </div>
             <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-base);border-radius:8px;border:1px solid var(--border)">
               <div style="width:28px;height:28px;border-radius:50%;background:var(--ccs-celeste);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;color:#fff">2</div>
@@ -1252,9 +1269,9 @@
             <p style="margin:0 0 16px;font-size:13px;color:var(--text-muted)">Sube un archivo de exportación generado en otra máquina. Se verificará la integridad del archivo antes de importar. Los datos existentes no se sobreescriben.</p>
 
             <div style="margin-bottom:16px">
-              <div id="importDropZone" style="border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('importFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'" ondrop="handleImportDrop(event)">
+              <div id="importDropZone" style="border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('importFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'">
                 <div style="font-size:32px;margin-bottom:8px">&#128230;</div>
-                <div style="font-size:14px;font-weight:500;color:var(--text-primary)">Arrastra el archivo aquí o haz click para seleccionar</div>
+                <div style="font-size:14px;font-weight:500;color:var(--text-primary)">Arrastra el archivo aquí o haz clic para seleccionar</div>
                 <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Solo archivos .json generados por la exportación</div>
               </div>
               <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(this)" />
@@ -1618,8 +1635,18 @@ function updateTopbarActions(page) {
   } else if (page === 'campaigns' && state.activeBrand) {
     actions.innerHTML = '<button class="btn btn-primary" onclick="openModal(\'modalNewCampaign\')">+ Nueva Campaña</button>';
   } else if (page === 'adn' && state.activeBrand) {
-    actions.innerHTML = '<button class="btn btn-success" onclick="approveADN()">&#10003; Aprobar ADN</button>';
+    syncApproveADNButton(state.currentADN && state.currentADN.status);
   }
+}
+
+function syncApproveADNButton(status) {
+  var actions = document.getElementById('topbarActions');
+  if (!actions || state.currentPage !== 'adn' || !state.activeBrand) return;
+  if (status !== 'draft') {
+    actions.innerHTML = '';
+    return;
+  }
+  actions.innerHTML = '<button class="btn btn-success" onclick="approveADN()">&#10003; Aprobar ADN</button>';
 }
 
 function loadPageContent(page) {
@@ -1639,11 +1666,33 @@ function loadPageContent(page) {
 // ============================================================
 function loadDashboard() {
   checkOllamaStatus();
-  loadDashboardStats();
+  fetch(apiUrl('/brands'))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      state.brands = data.brands || [];
+      var sel = document.getElementById('dashBrandFilter');
+      if (sel) {
+        var current = sel.value;
+        var html = '<option value="">Todas las marcas</option>';
+        for (var i = 0; i < state.brands.length; i++) {
+          var b = state.brands[i];
+          html += '<option value="' + escapeHtml(b.id) + '">' + escapeHtml(b.name) + '</option>';
+        }
+        sel.innerHTML = html;
+        if (current) sel.value = current;
+      }
+      var badge = document.getElementById('brandsBadge');
+      if (badge) badge.textContent = state.brands.length;
+      loadDashboardStats();
+    })
+    .catch(function() { loadDashboardStats(); });
 }
 
 function loadDashboardStats() {
-  fetch(apiUrl('/stats'))
+  var sel = document.getElementById('dashBrandFilter');
+  var brandId = sel ? sel.value : '';
+  var url = apiUrl('/stats') + (brandId ? ('?brand_id=' + encodeURIComponent(brandId)) : '');
+  fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       document.getElementById('statBrands').textContent = data.brands || 0;
@@ -2130,6 +2179,7 @@ function loadADN() {
 }
 
 function renderADNEmpty() {
+  syncApproveADNButton(null);
   var content = document.getElementById('adnContent');
   var brand = state.activeBrand;
   content.innerHTML = safeHTML('<div class="card"><div class="card-header"><div><div class="card-title">ADN de ' + escapeHtml(brand.name) + '</div><div class="card-subtitle">Aún no se ha construido el ADN de esta marca</div></div></div>' +
@@ -2153,6 +2203,7 @@ function renderADN(adn) {
 
   // Guardar referencia al ADN actual para edición
   state.currentADN = adn;
+  syncApproveADNButton(status);
 
   var html = '<div class="card">';
   html += '<div class="card-header">';
@@ -3458,8 +3509,6 @@ function renderPubEditor(pub) {
   html += '<input type="text" id="editPubHashtags" value="' + escapeHtml(hashtags) + '" oninput="updatePreviewHashtags()" /></div>';
   html += '<div class="form-group"><label>CTA (Llamada a la acción)</label>';
   html += '<input type="text" id="editPubCTA" value="' + escapeHtml(pub.cta || '') + '" /></div>';
-  html += '<div class="form-group"><label>Prompt de imagen</label>';
-  html += '<textarea id="editPubImagePrompt" style="min-height:60px">' + escapeHtml(pub.image_prompt || '') + '</textarea></div>';
 
   // ── Sección de generación con IA (texto e imagen separados) ──
   html += '<div style="background:var(--bg-base);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">';
@@ -3472,7 +3521,7 @@ function renderPubEditor(pub) {
 
   // Selector de modelo de texto + estado
   html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">';
-  html += '<input id="editTextModel" value="Modelo del perfil" disabled style="font-size:12px;flex:1;min-width:160px" />';
+  html += '<div id="editTextModel" style="font-size:13px;font-weight:600;color:var(--text-main)">Modelo del perfil</div>';
   html += '<span id="textModelStatus" style="font-size:10px;color:var(--text-muted);white-space:nowrap"></span>';
   html += '</div>';
 
@@ -3514,9 +3563,8 @@ function renderPubEditor(pub) {
 
   // Prompt de imagen visible y editable
   html += '<div style="margin-bottom:10px">';
-  html += '<label style="font-size:11px;color:var(--text-muted)">Prompt de imagen (editable)</label>';
-  html += '<textarea id="editPubImagePromptInline" style="min-height:60px;font-size:12px" placeholder="Describe la imagen que quieres para usar en herramientas externas...">' + escapeHtml(pub.image_prompt || '') + '</textarea>';
-  html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Este prompt tambi\u00e9n se actualiza en el campo &quot;Prompt de imagen&quot; de arriba.</div>';
+  html += '<label style="font-size:11px;color:var(--text-muted)">Prompt de imagen</label>';
+  html += '<textarea id="editPubImagePrompt" style="min-height:60px;font-size:12px" placeholder="Describe la imagen que quieres para usar en herramientas externas...">' + escapeHtml(pub.image_prompt || '') + '</textarea>';
   html += '</div>';
 
   // Bot\u00f3n de prompt para herramienta externa
@@ -3552,13 +3600,6 @@ function renderPubEditor(pub) {
   // Cargar modelos de texto en background e inicializar zona de imagen
   setTimeout(function() {
     _loadTextModels();
-    // Sincronizar prompt inline con el campo principal
-    var inlinePrompt = document.getElementById('editPubImagePromptInline');
-    var mainPrompt = document.getElementById('editPubImagePrompt');
-    if (inlinePrompt && mainPrompt) {
-      inlinePrompt.addEventListener('input', function() { mainPrompt.value = inlinePrompt.value; });
-      mainPrompt.addEventListener('input', function() { inlinePrompt.value = mainPrompt.value; });
-    }
     // Inicializar zona de paste/drop para imagen
     _initImageDropZone(pub.id, state.activeCampaign ? state.activeCampaign.id : '');
   }, 100);
@@ -3693,7 +3734,7 @@ function enhanceImagePromptWithAI() {
  * El prompt resultante sigue las convenciones de cada herramienta (descriptivo, con estilos, pesos, etc.)
  */
 function generateExternalPrompt() {
-  var promptEl = document.getElementById('editPubImagePromptInline') || document.getElementById('editPubImagePrompt');
+  var promptEl = document.getElementById('editPubImagePrompt');
   var currentPrompt = promptEl ? promptEl.value.trim() : '';
 
   // Obtener contexto de la publicación actual
@@ -4110,7 +4151,7 @@ function renderAgents(agents) {
     // Cabecera del agente
     html += '<div class="card-header" style="align-items:flex-start">';
     html += '<div>';
-    html += '<div class="card-title" style="font-size:16px">' + escapeHtml(a.name) + '</div>';
+    html += '<div class="card-title" style="font-size:16px">' + escapeHtml(agentLabel(a)) + '</div>';
     html += '<div class="card-subtitle" style="margin-top:4px">' + escapeHtml(a.description || '') + '</div>';
     html += '</div>';
     html += '<span class="brand-status status-complete" style="flex-shrink:0">' + escapeHtml(a.role || '') + '</span>';
@@ -4120,12 +4161,14 @@ function renderAgents(agents) {
     html += '<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">';
     html += '<div>';
     html += '<label>Modelo</label>';
-    html += '<input type="text" id="model_' + agentId + '" value="Modelo del perfil" disabled style="width:220px" />';
+    html += '<div style="font-size:13px;font-weight:600">Modelo del perfil</div>';
+    html += '<div class="field-help">Lo elige el equipo según la RAM. No se cambia por agente.</div>';
     html += '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Visión: ' + escapeHtml(a.vision || 'no disponible en este perfil') + '</div>';
     html += '</div>';
     html += '<div>';
     html += '<label>Temperatura</label>';
     html += '<input type="number" id="temp_' + agentId + '" value="' + (a.temperature || 0.7) + '" min="0" max="2" step="0.1" style="width:80px" />';
+    html += '<div class="field-help">Qué tan variada es la respuesta. 0 es más literal; 1 es más libre.</div>';
     html += '</div>';
     html += '</div>';
 
@@ -4133,15 +4176,21 @@ function renderAgents(agents) {
     html += '<div style="margin-bottom:16px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
     html += '<label style="margin:0">System Prompt</label>';
+    html += '<div class="field-help" style="margin:0 0 0 8px">Instrucciones fijas del agente: rol, formato y límites. No es el mensaje de cada tarea.</div>';
     html += '<button class="btn btn-sm btn-primary" onclick="saveAgentPrompt(\'' + agentId + '\')">Guardar prompt</button>';
     html += '</div>';
     html += '<textarea id="prompt_' + agentId + '" style="min-height:180px;font-size:12px;font-family:monospace;line-height:1.5">' + escapeHtml(a.system_prompt || '') + '</textarea>';
     html += '</div>';
 
     // Skills editables
+    html += '<div>';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">';
+      html += '<div><label style="margin:0;display:block">Skills (' + skills.length + ')</label>';
+      html += '<div class="field-help">Archivos de instrucciones extra que el agente lee junto al system prompt.</div></div>';
+      html += '<button class="btn btn-sm btn-secondary" onclick="addAgentSkill(\'' + agentId + '\')">+ Agregar skill</button>';
+      html += '</div>';
     if (skills.length > 0) {
       html += '<div>';
-      html += '<label style="margin-bottom:8px;display:block">Skills (' + skills.length + ')</label>';
       html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
       for (var si = 0; si < skills.length; si++) {
         var sname = skills[si];
@@ -4170,11 +4219,48 @@ function renderAgents(agents) {
       }
       html += '</div>';
     }
+    html += '</div>';
 
     html += '</div>'; // /card
   }
   html += '</div>';
   content.innerHTML = html;
+}
+
+var AGENT_LABELS = {
+  brand_analyzer: 'Analizador de Marca',
+  brand_interviewer: 'Entrevistador de Marca',
+  campaign_strategist: 'Estratega de Campaña',
+  content_writer: 'Redactor de Contenido'
+};
+
+function agentLabel(agent) {
+  if (!agent) return '';
+  return AGENT_LABELS[agent.id] || agent.name || agent.id || '';
+}
+
+function addAgentSkill(agentId) {
+  var raw = prompt('Nombre del skill (letras, números y guion bajo). Ejemplo: tono_de_marca');
+  if (!raw) return;
+  var name = raw.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!name) {
+    showNotification('El nombre del skill no es válido', 'error');
+    return;
+  }
+  fetch(apiUrl('/agents/' + agentId + '/skills'), {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: name})
+  })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(d) { throw new Error(d.detail || 'No se pudo agregar'); });
+      return r.json();
+    })
+    .then(function() {
+      showNotification('Skill «' + name + '» agregado', 'success');
+      loadAgents();
+    })
+    .catch(function(e) { showNotification(e.message, 'error'); });
 }
 
 function toggleSkillEditor(agentId, skillName) {
@@ -4421,7 +4507,7 @@ function renderAudit(entries) {
 
     html += '<tr style="border-bottom:1px solid var(--border)">';
     html += '<td style="padding:8px;color:var(--text-muted)">' + time + '</td>';
-    html += '<td style="padding:8px">' + escapeHtml(e.agent_id || '') + '</td>';
+    html += '<td style="padding:8px">' + escapeHtml(AGENT_LABELS[e.agent_id] || e.agent_id || '') + '</td>';
     html += '<td style="padding:8px">' + escapeHtml(e.task || '') + '</td>';
     html += '<td style="padding:8px;color:var(--primary)">' + escapeHtml(e.model || '') + '</td>';
     html += '<td style="padding:8px;text-align:right;color:var(--text-muted)">' + _formatNumber(rowTokens) + '</td>';
@@ -4471,7 +4557,8 @@ function loadExportImport() {
 
 function exportData() {
   var btn = document.getElementById('btnExport');
-  if (btn) { btn.disabled = true; btn.textContent = 'Generando exportaci\u00f3n...'; }
+  var label = '&#8595; Descargar archivo de exportación';
+  if (btn) { btn.disabled = true; }
 
   // Descargar directamente usando un enlace
   fetch(apiUrl('/export'))
@@ -4493,18 +4580,19 @@ function exportData() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showNotification('Exportaci\u00f3n descargada exitosamente', 'success');
+      showNotification('Se guardó «' + result.filename + '» en la carpeta Descargas.', 'success');
     })
     .catch(function(e) {
       showNotification('Error al exportar: ' + e.message, 'error');
     })
     .finally(function() {
-      if (btn) { btn.disabled = false; btn.innerHTML = '&#8595; Descargar archivo de exportaci\u00f3n'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = label; }
     });
 }
 
 function handleImportDrop(event) {
   event.preventDefault();
+  event.stopPropagation();
   var dropZone = document.getElementById('importDropZone');
   if (dropZone) { dropZone.style.borderColor = 'var(--border)'; dropZone.style.background = 'transparent'; }
 
@@ -5072,7 +5160,72 @@ function init() {
     .catch(function() {});
 }
 
+var TOUR_STEPS = [
+  { title: 'Marcas', body: 'Aquí registras cada empresa. Crea la marca con su nombre y sitio web antes de pedirle el ADN a la IA.', page: 'brands' },
+  { title: 'ADN de marca', body: 'El ADN es la identidad que usarán las campañas. Entra a la marca, revisa los campos y aprueba solo cuando no queden cambios.', page: 'adn' },
+  { title: 'Entrevista con IA', body: 'Si el sitio no alcanza, la entrevista hace preguntas y completa el ADN. Las respuestas quedan en esta pantalla.', page: 'interview' },
+  { title: 'Campañas', body: 'Con el ADN listo, creas una campaña y la app propone publicaciones para tus redes.', page: 'campaigns' },
+  { title: 'Calendario', body: 'Cada publicación se edita aquí: texto, hashtags y un solo prompt de imagen.', page: 'calendar' },
+  { title: 'Agentes IA', body: 'El modelo de texto es el del perfil de RAM. Aquí ajustas temperatura, system prompt y skills.', page: 'agents' }
+];
+var _tourIdx = 0;
+
+function startProductTour(manual) {
+  _tourIdx = 0;
+  var ov = document.getElementById('tourOverlay');
+  if (!ov) return;
+  ov.classList.add('open');
+  renderTourStep();
+}
+
+function renderTourStep() {
+  var step = TOUR_STEPS[_tourIdx];
+  var card = document.getElementById('tourCard');
+  if (!step || !card) { endProductTour(); return; }
+  if (step.page) navigateTo(step.page);
+  card.innerHTML = '<div class="tour-step">Paso ' + (_tourIdx + 1) + ' de ' + TOUR_STEPS.length + '</div>' +
+    '<div class="tour-title">' + escapeHtml(step.title) + '</div>' +
+    '<div class="tour-body">' + escapeHtml(step.body) + '</div>' +
+    '<div class="tour-actions">' +
+    '<button class="btn btn-secondary btn-sm" onclick="endProductTour()">Saltar</button>' +
+    (_tourIdx > 0 ? '<button class="btn btn-secondary btn-sm" onclick="tourPrev()">Atrás</button>' : '') +
+    '<button class="btn btn-primary btn-sm" onclick="tourNext()">' + (_tourIdx === TOUR_STEPS.length - 1 ? 'Listo' : 'Siguiente') + '</button>' +
+    '</div>';
+  card.style.left = '280px';
+  card.style.top = '88px';
+}
+
+function tourNext() {
+  if (_tourIdx >= TOUR_STEPS.length - 1) { endProductTour(); return; }
+  _tourIdx += 1;
+  renderTourStep();
+}
+
+function tourPrev() {
+  if (_tourIdx > 0) _tourIdx -= 1;
+  renderTourStep();
+}
+
+function endProductTour() {
+  var ov = document.getElementById('tourOverlay');
+  if (ov) ov.classList.remove('open');
+  localStorage.setItem('sr_tour_v1', '1');
+  navigateTo('dashboard');
+}
+
+document.addEventListener('dragover', function(e) {
+  var zone = e.target && e.target.closest && e.target.closest('#importDropZone');
+  if (zone) e.preventDefault();
+});
+document.addEventListener('drop', function(e) {
+  var zone = e.target && e.target.closest && e.target.closest('#importDropZone');
+  if (!zone) return;
+  handleImportDrop(e);
+});
+
 init();
+if (!localStorage.getItem('sr_tour_v1')) startProductTour(false);
 </script>
+<div class="tour-overlay" id="tourOverlay"><div class="tour-card" id="tourCard"></div></div>
 </body>
 </html>
