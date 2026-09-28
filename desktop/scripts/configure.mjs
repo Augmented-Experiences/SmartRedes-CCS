@@ -164,6 +164,9 @@ const tauriConf = {
       "icons/icon.ico",
     ],
     externalBin: ["binaries/backend"],
+    macOS: {
+      entitlements: "entitlements.plist",
+    },
     category: "Finance",
     shortDescription: cfg.shortDescription || productName,
     longDescription: cfg.longDescription || productName,
