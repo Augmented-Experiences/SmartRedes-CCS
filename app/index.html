@@ -1048,7 +1048,13 @@
   <div class="main-content">
     <div class="topbar">
       <div class="topbar-title" id="pageTitle">Dashboard</div>
-      <div class="topbar-actions" id="topbarActions"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+        <label for="activeBrandSelect" style="font-size:12px;color:var(--text-muted);margin:0;white-space:nowrap">Marca activa</label>
+        <select id="activeBrandSelect" onchange="onActiveBrandChange(this.value)" style="width:auto;min-width:200px;font-size:13px">
+          <option value="">Elegir marca</option>
+        </select>
+        <div class="topbar-actions" id="topbarActions"></div>
+      </div>
     </div>
 
     <!-- ===== PAGE: DASHBOARD ===== -->
@@ -1056,6 +1062,13 @@
       <!-- Readiness Banner -->
       <div id="readinessBanner"></div>
       <div id="ramWarnBanner"></div>
+      <div class="card" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div class="card-title">Guía de la plataforma</div>
+          <div class="card-subtitle">Recorre el Dashboard, las marcas, el ADN y las campañas. En el paso 2, Atrás vuelve a esta pantalla.</div>
+        </div>
+        <button class="btn btn-primary" onclick="startProductTour(true)">Comenzar guía</button>
+      </div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:12px">
         <label for="dashBrandFilter" style="font-size:12px;color:var(--text-muted);margin:0">Estadísticas de</label>
         <select id="dashBrandFilter" onchange="loadDashboardStats()" style="width:auto;min-width:200px;font-size:13px">
@@ -1127,7 +1140,7 @@
                 <div style="font-size:13px;font-weight:600">Crear una marca</div>
                 <div style="font-size:11px;color:var(--text-muted)">Registra el nombre y sitio web de tu empresa</div>
               </div>
-              <button class="btn btn-sm btn-primary" style="margin-left:auto" onclick="startProductTour(true)">Ir</button>
+              <button class="btn btn-sm btn-primary" style="margin-left:auto" onclick="navigateTo('brands')">Ir</button>
             </div>
             <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-base);border-radius:8px;border:1px solid var(--border)">
               <div style="width:28px;height:28px;border-radius:50%;background:var(--ccs-celeste);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;color:#fff">2</div>
@@ -1291,6 +1304,27 @@
 </div><!-- /app-layout -->
 
 <!-- ===== MODAL: Nueva Marca ===== -->
+<div class="modal-overlay" id="modalAddSkill" onclick="_onOverlayClick(event,'modalAddSkill')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Agregar skill</div>
+      <button class="modal-close" onclick="closeModal('modalAddSkill')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 16px;font-size:13px;color:var(--text-muted)">Un skill es un archivo de instrucciones extra que el agente lee junto al system prompt.</p>
+      <div class="form-group">
+        <label for="newSkillName">Nombre</label>
+        <input id="newSkillName" placeholder="tono_de_marca" autocomplete="off" />
+        <div class="field-help">Letras, números y guion bajo. Ejemplo: tono_de_marca</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="closeModal('modalAddSkill')">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmAddSkill()">Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalNewBrand" onclick="_onOverlayClick(event,'modalNewBrand')">
   <div class="modal">
     <div class="modal-header">
@@ -1670,6 +1704,7 @@ function loadDashboard() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       state.brands = data.brands || [];
+      refreshActiveBrandSelect();
       var sel = document.getElementById('dashBrandFilter');
       if (sel) {
         var current = sel.value;
@@ -1877,6 +1912,7 @@ function loadBrands() {
 }
 
 function renderBrands() {
+  refreshActiveBrandSelect();
   var content = document.getElementById('brandsContent');
 
   if (state.brands.length === 0) {
@@ -1941,8 +1977,27 @@ function selectBrand(brandId) {
 
   document.getElementById('brandSection').style.display = 'block';
   document.getElementById('activeBrandLabel').textContent = state.activeBrand.name;
+  refreshActiveBrandSelect();
   renderBrands();
   showNotification('Marca seleccionada: ' + state.activeBrand.name, 'info');
+}
+
+function onActiveBrandChange(brandId) {
+  if (!brandId) return;
+  selectBrand(brandId);
+}
+
+function refreshActiveBrandSelect() {
+  var sel = document.getElementById('activeBrandSelect');
+  if (!sel) return;
+  var current = state.activeBrand ? state.activeBrand.id : '';
+  var html = '<option value="">Elegir marca</option>';
+  for (var i = 0; i < state.brands.length; i++) {
+    var b = state.brands[i];
+    html += '<option value="' + b.id + '">' + escapeHtml(b.name) + '</option>';
+  }
+  sel.innerHTML = html;
+  sel.value = current;
 }
 
 function selectBrandAndGo(brandId, page) {
@@ -1966,6 +2021,7 @@ function deleteBrand(brandId, brandName) {
         state.activeBrand = null;
         document.getElementById('brandSection').style.display = 'none';
       }
+      refreshActiveBrandSelect();
       document.getElementById('brandsBadge').textContent = state.brands.length;
       renderBrands();
     })
@@ -4195,6 +4251,7 @@ function renderAgents(agents) {
       for (var si = 0; si < skills.length; si++) {
         var sname = skills[si];
         html += '<button class="btn btn-sm" style="background:rgba(13,86,202,0.08);color:var(--ccs-azul);border:1px solid rgba(13,86,202,0.2)" onclick="toggleSkillEditor(\'' + agentId + '\',\'' + sname + '\')">&#9998; ' + escapeHtml(sname) + '</button>';
+        html += '<button class="btn btn-sm btn-danger" onclick="deleteAgentSkill(\'' + agentId + '\',\'' + sname + '\')">Eliminar</button>';
       }
       html += '</div>';
 
@@ -4207,6 +4264,7 @@ function renderAgents(agents) {
         html += '<div style="font-size:12px;font-weight:700;color:var(--ccs-azul)">' + escapeHtml(skillName) + '.md</div>';
         html += '<div style="display:flex;gap:6px">';
         html += '<button class="btn btn-sm btn-primary" onclick="saveSkillContent(\'' + agentId + '\',\'' + skillName + '\')">Guardar skill</button>';
+        html += '<button class="btn btn-sm btn-danger" onclick="deleteAgentSkill(\'' + agentId + '\',\'' + skillName + '\')">Eliminar</button>';
         html += '<button class="btn btn-sm btn-secondary" onclick="toggleSkillEditor(\'' + agentId + '\',\'' + skillName + '\')" >Cerrar</button>';
         html += '</div></div>';
         if (skillContent) {
@@ -4239,9 +4297,21 @@ function agentLabel(agent) {
   return AGENT_LABELS[agent.id] || agent.name || agent.id || '';
 }
 
+var _skillAgentId = null;
+
 function addAgentSkill(agentId) {
-  var raw = prompt('Nombre del skill (letras, números y guion bajo). Ejemplo: tono_de_marca');
-  if (!raw) return;
+  _skillAgentId = agentId;
+  var input = document.getElementById('newSkillName');
+  if (input) input.value = '';
+  openModal('modalAddSkill');
+  if (input) setTimeout(function() { input.focus(); }, 50);
+}
+
+function confirmAddSkill() {
+  var agentId = _skillAgentId;
+  var input = document.getElementById('newSkillName');
+  var raw = input ? input.value : '';
+  if (!raw || !raw.trim()) return;
   var name = raw.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
   if (!name) {
     showNotification('El nombre del skill no es válido', 'error');
@@ -4257,7 +4327,22 @@ function addAgentSkill(agentId) {
       return r.json();
     })
     .then(function() {
+      closeModal('modalAddSkill');
       showNotification('Skill «' + name + '» agregado', 'success');
+      loadAgents();
+    })
+    .catch(function(e) { showNotification(e.message, 'error'); });
+}
+
+function deleteAgentSkill(agentId, skillName) {
+  if (!confirm('¿Eliminar el skill «' + skillName + '» de este agente?')) return;
+  fetch(apiUrl('/agents/' + agentId + '/skills/' + encodeURIComponent(skillName)), { method: 'DELETE' })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(d) { throw new Error(d.detail || 'No se pudo eliminar'); });
+      return r.json();
+    })
+    .then(function() {
+      showNotification('Skill «' + skillName + '» eliminado', 'success');
       loadAgents();
     })
     .catch(function(e) { showNotification(e.message, 'error'); });
@@ -5145,6 +5230,7 @@ function init() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       state.brands = data.brands || [];
+      refreshActiveBrandSelect();
       document.getElementById('brandsBadge').textContent = state.brands.length;
       document.getElementById('statBrands').textContent = state.brands.length;
       var complete = state.brands.filter(function(b) { return b.onboarding_status === 'complete'; }).length;
@@ -5161,6 +5247,7 @@ function init() {
 }
 
 var TOUR_STEPS = [
+  { title: 'Dashboard', body: 'Esta es la pantalla de inicio. Desde aquí cambias la marca activa, ves el resumen y abres esta guía cuando la necesites.', page: 'dashboard' },
   { title: 'Marcas', body: 'Aquí registras cada empresa. Crea la marca con su nombre y sitio web antes de pedirle el ADN a la IA.', page: 'brands' },
   { title: 'ADN de marca', body: 'El ADN es la identidad que usarán las campañas. Entra a la marca, revisa los campos y aprueba solo cuando no queden cambios.', page: 'adn' },
   { title: 'Entrevista con IA', body: 'Si el sitio no alcanza, la entrevista hace preguntas y completa el ADN. Las respuestas quedan en esta pantalla.', page: 'interview' },

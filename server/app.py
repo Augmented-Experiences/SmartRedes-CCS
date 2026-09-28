@@ -4890,6 +4890,34 @@ def add_agent_skill(agent_id: str, body: SkillCreate):
     return {"ok": True, "skill": name, "agent_id": agent_id}
 
 
+@app.delete("/api/agents/{agent_id}/skills/{skill_name}")
+def delete_agent_skill(agent_id: str, skill_name: str):
+    """Quita el skill del agente y borra el archivo si ningún otro agente lo usa."""
+    import re
+    name = re.sub(r"[^a-z0-9_]", "", (skill_name or "").strip().lower())
+    if not name:
+        raise HTTPException(status_code=400, detail="Nombre de skill no válido")
+    agents_file = DATA_DIR / "agents" / "agents.json"
+    agents_data = load_json(agents_file, {"agents": []})
+    found = None
+    still_used = False
+    for agent in agents_data.get("agents", []):
+        skills = agent.get("skills") or []
+        if agent.get("id") == agent_id:
+            found = agent
+            agent["skills"] = [s for s in skills if s != name]
+        elif name in skills:
+            still_used = True
+    if not found:
+        raise HTTPException(status_code=404, detail="Agente no encontrado")
+    save_json(agents_file, agents_data)
+    if not still_used:
+        skill_file = DATA_DIR / "prompts" / "skills" / f"{name}.md"
+        if skill_file.exists():
+            skill_file.unlink()
+    return {"ok": True, "skill": name, "agent_id": agent_id}
+
+
 @app.get("/api/skills")
 def list_skills():
     """Lista todos los skills disponibles con su contenido."""
