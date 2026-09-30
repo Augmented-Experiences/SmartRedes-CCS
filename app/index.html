@@ -1065,7 +1065,7 @@
       <div class="card" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <div class="card-title">Guía de la plataforma</div>
-          <div class="card-subtitle">Recorre el Dashboard, las marcas, el ADN y las campañas. En el paso 2, Atrás vuelve a esta pantalla.</div>
+          <div class="card-subtitle">Recorre el Dashboard, las marcas, el ADN y las campañas.</div>
         </div>
         <button class="btn btn-primary" onclick="startProductTour(true)">Comenzar guía</button>
       </div>
@@ -4195,6 +4195,7 @@ function loadAgents() {
 
 function renderAgents(agents) {
   var content = document.getElementById('agentsContent');
+  _agentOriginals = {};
 
   var html = '<div style="display:flex;flex-direction:column;gap:20px">';
   for (var i = 0; i < agents.length; i++) {
@@ -4223,7 +4224,7 @@ function renderAgents(agents) {
     html += '</div>';
     html += '<div>';
     html += '<label>Temperatura</label>';
-    html += '<input type="number" id="temp_' + agentId + '" value="' + (a.temperature || 0.7) + '" min="0" max="2" step="0.1" style="width:80px" />';
+    html += '<input type="number" id="temp_' + agentId + '" value="' + (a.temperature != null ? a.temperature : 0.7) + '" min="0" max="2" step="0.1" style="width:80px" oninput="syncPromptSave(\'' + agentId + '\')" />';
     html += '<div class="field-help">Qué tan variada es la respuesta. 0 es más literal; 1 es más libre.</div>';
     html += '</div>';
     html += '</div>';
@@ -4233,9 +4234,9 @@ function renderAgents(agents) {
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
     html += '<label style="margin:0">System Prompt</label>';
     html += '<div class="field-help" style="margin:0 0 0 8px">Instrucciones fijas del agente: rol, formato y límites. No es el mensaje de cada tarea.</div>';
-    html += '<button class="btn btn-sm btn-primary" onclick="saveAgentPrompt(\'' + agentId + '\')">Guardar prompt</button>';
+    html += '<button class="btn btn-sm btn-primary" id="savePrompt_' + agentId + '" style="display:none" onclick="saveAgentPrompt(\'' + agentId + '\')">Guardar prompt</button>';
     html += '</div>';
-    html += '<textarea id="prompt_' + agentId + '" style="min-height:180px;font-size:12px;font-family:monospace;line-height:1.5">' + escapeHtml(a.system_prompt || '') + '</textarea>';
+    html += '<textarea id="prompt_' + agentId + '" oninput="syncPromptSave(\'' + agentId + '\')" style="min-height:180px;font-size:12px;font-family:monospace;line-height:1.5">' + escapeHtml(a.system_prompt || '') + '</textarea>';
     html += '</div>';
 
     // Skills editables
@@ -4250,8 +4251,10 @@ function renderAgents(agents) {
       html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
       for (var si = 0; si < skills.length; si++) {
         var sname = skills[si];
+        html += '<span style="display:inline-flex;align-items:center;gap:2px">';
         html += '<button class="btn btn-sm" style="background:rgba(13,86,202,0.08);color:var(--ccs-azul);border:1px solid rgba(13,86,202,0.2)" onclick="toggleSkillEditor(\'' + agentId + '\',\'' + sname + '\')">&#9998; ' + escapeHtml(sname) + '</button>';
-        html += '<button class="btn btn-sm btn-danger" onclick="deleteAgentSkill(\'' + agentId + '\',\'' + sname + '\')">Eliminar</button>';
+        html += '<button class="btn btn-sm" style="background:transparent;color:#64748b;border:none;padding:4px 6px" title="Eliminar skill" onclick="deleteAgentSkill(\'' + agentId + '\',\'' + sname + '\')">&#128465;</button>';
+        html += '</span>';
       }
       html += '</div>';
 
@@ -4264,7 +4267,7 @@ function renderAgents(agents) {
         html += '<div style="font-size:12px;font-weight:700;color:var(--ccs-azul)">' + escapeHtml(skillName) + '.md</div>';
         html += '<div style="display:flex;gap:6px">';
         html += '<button class="btn btn-sm btn-primary" onclick="saveSkillContent(\'' + agentId + '\',\'' + skillName + '\')">Guardar skill</button>';
-        html += '<button class="btn btn-sm btn-danger" onclick="deleteAgentSkill(\'' + agentId + '\',\'' + skillName + '\')">Eliminar</button>';
+        html += '<button class="btn btn-sm" style="background:transparent;color:#64748b;border:none;padding:4px 6px" title="Eliminar skill" onclick="deleteAgentSkill(\'' + agentId + '\',\'' + skillName + '\')">&#128465;</button>';
         html += '<button class="btn btn-sm btn-secondary" onclick="toggleSkillEditor(\'' + agentId + '\',\'' + skillName + '\')" >Cerrar</button>';
         html += '</div></div>';
         if (skillContent) {
@@ -4279,10 +4282,27 @@ function renderAgents(agents) {
     }
     html += '</div>';
 
+    _agentOriginals[agentId] = {
+      prompt: a.system_prompt || '',
+      temp: String(a.temperature != null ? a.temperature : 0.7)
+    };
     html += '</div>'; // /card
   }
   html += '</div>';
   content.innerHTML = html;
+}
+
+var _agentOriginals = {};
+
+function syncPromptSave(agentId) {
+  var promptEl = document.getElementById('prompt_' + agentId);
+  var tempEl = document.getElementById('temp_' + agentId);
+  var btn = document.getElementById('savePrompt_' + agentId);
+  var orig = _agentOriginals[agentId];
+  if (!promptEl || !btn || !orig) return;
+  var tempNow = tempEl ? String(tempEl.value) : orig.temp;
+  var dirty = promptEl.value !== orig.prompt || tempNow !== orig.temp;
+  btn.style.display = dirty ? '' : 'none';
 }
 
 var AGENT_LABELS = {
@@ -4390,6 +4410,11 @@ function saveAgentPrompt(agentId) {
   })
     .then(function(r) { return r.json(); })
     .then(function() {
+      if (_agentOriginals[agentId]) {
+        _agentOriginals[agentId].prompt = promptEl.value;
+        if (tempEl) _agentOriginals[agentId].temp = String(tempEl.value);
+      }
+      syncPromptSave(agentId);
       showNotification('Agente "' + agentId + '" actualizado correctamente', 'success');
     })
     .catch(function(e) {
