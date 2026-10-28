@@ -64,13 +64,36 @@ jobs:
           python -m venv venv
           bash desktop/scripts/build-backend.sh --installer
           DMG="$(echo desktop/src-tauri/target/release/bundle/dmg/*.dmg)"
-          xcrun notarytool submit "$DMG" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait
-          xcrun stapler staple "$DMG"
-          xcrun stapler validate "$DMG"
+          submit_ok=0
+          for attempt in 1 2 3; do
+            if xcrun notarytool submit "$DMG" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait; then
+              submit_ok=1
+              break
+            fi
+            echo "notarytool intento ${attempt} falló. Reintento en 20s." >&2
+            sleep 20
+          done
+          if [ "$submit_ok" != "1" ]; then
+            echo "Apple no aceptó la notarización." >&2
+            exit 1
+          fi
+          staple_ok=0
+          for attempt in 1 2 3 4 5; do
+            if xcrun stapler staple "$DMG" && xcrun stapler validate "$DMG"; then
+              staple_ok=1
+              break
+            fi
+            echo "Staple intento ${attempt} falló (red de Apple). Reintento en 30s." >&2
+            sleep 30
+          done
+          if [ "$staple_ok" != "1" ]; then
+            echo "No se pudo grapar el ticket de notarización." >&2
+            exit 1
+          fi
           codesign -dv --verbose=2 "$DMG"
           ls -lh desktop/src-tauri/target/release/bundle/dmg
 
