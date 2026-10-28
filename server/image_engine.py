@@ -267,6 +267,13 @@ def _load_pipeline(model_id: str, on_progress: Optional[Callable] = None) -> Non
         logger.info(f"[ImageEngine] Modelo {model_id} ya está cargado")
         return
 
+    allowed = {item["id"] for item in list_available_models()}
+    if model_id not in allowed or model_id.startswith(("http://", "https://", "/", "\\")) or ".." in model_id:
+        msg = "Solo se pueden cargar los modelos del catálogo local. No se aceptan rutas ni URL."
+        _update_status("error", 0, msg, model_id, msg)
+        logger.error("[ImageEngine] %s", msg)
+        return
+
     _update_status("loading", 5, f"Iniciando carga de {model_id}...", model_id, None)
     if on_progress:
         on_progress(get_engine_status())
@@ -308,6 +315,7 @@ def _load_pipeline(model_id: str, on_progress: Optional[Callable] = None) -> Non
             "torch_dtype": torch.float32,  # float32 para CPU (float16 requiere GPU)
             "safety_checker": None,        # Deshabilitar safety checker para velocidad
             "requires_safety_checker": False,
+            "trust_remote_code": False,
         }
 
         if is_lcm:

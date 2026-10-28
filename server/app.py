@@ -220,6 +220,8 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("css-brand-assistant")
+from log_safety import install_log_sanitizer
+install_log_sanitizer(logger)
 
 # Agregar RotatingFileHandler para evitar crecimiento ilimitado de logs
 try:
@@ -262,7 +264,7 @@ _ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
-    allow_origin_regex=r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$",
+    allow_origin_regex=r"^https?://(\[::1\]|127\.0\.0\.1|localhost)(:\d+)?$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -276,10 +278,33 @@ from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response as StarletteResponse
 
 
+def _loopback_host(host: str) -> bool:
+    """Solo localhost, 127.0.0.1 y ::1, con puerto opcional."""
+    value = (host or "").strip().lower()
+    if not value:
+        return False
+    if value.startswith("["):
+        end = value.find("]")
+        if end == -1:
+            return False
+        name = value[1:end]
+        rest = value[end + 1:]
+    else:
+        name, sep, rest = value.partition(":")
+    if rest:
+        port = rest[1:] if rest.startswith(":") else rest
+        if not port.isdigit():
+            return False
+    return name in {"localhost", "127.0.0.1", "::1"}
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Agrega headers de seguridad estándar a todas las respuestas."""
 
     async def dispatch(self, request: StarletteRequest, call_next):
+        host = request.headers.get("host", "")
+        if not _loopback_host(host):
+            return StarletteResponse("Host no permitido.", status_code=400)
         response: StarletteResponse = await call_next(request)
         # Prevenir clickjacking: no permitir que la UI se cargue en iframes externos
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
@@ -1112,75 +1137,17 @@ class AgentConfigUpdate(BaseModel):
 # Seguridad: validación anti-SSRF de URLs
 # Bloquea esquemas peligrosos y rangos de IP locales/privados.
 # ---------------------------------------------------------------------------
-import ipaddress
-from urllib.parse import urlparse
-
-_BLOCKED_IP_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),      # Loopback
-    ipaddress.ip_network("10.0.0.0/8"),       # Privada clase A
-    ipaddress.ip_network("172.16.0.0/12"),    # Privada clase B
-    ipaddress.ip_network("192.168.0.0/16"),   # Privada clase C
-    ipaddress.ip_network("169.254.0.0/16"),   # Link-local / metadatos cloud
-    ipaddress.ip_network("0.0.0.0/8"),        # Red actual
-    ipaddress.ip_network("::1/128"),           # Loopback IPv6
-    ipaddress.ip_network("fc00::/7"),          # Privada IPv6
-    ipaddress.ip_network("fe80::/10"),         # Link-local IPv6
-]
-
 def validate_url_safe(url: str) -> str:
     """Valida que una URL sea segura para hacer requests (anti-SSRF).
-    
-    Reglas:
-      - Solo esquemas http y https permitidos
-      - No se permiten IPs locales/privadas ni metadatos cloud
-      - No se permite el esquema file://
-      - El hostname debe existir y ser resolvible
-    
-    Retorna la URL limpia si es válida, lanza HTTPException si no.
+
+    Solo http y https. Rechaza privadas, loopback, link-local, reservadas
+    y metadata. SMARTREDES_ALLOW_PRIVATE_URLS=1 permite redes privadas.
     """
-    import socket
-    
-    parsed = urlparse(url.strip())
-    
-    # 1. Solo http/https
-    if parsed.scheme not in ("http", "https"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Esquema de URL no permitido: '{parsed.scheme}'. Solo http y https."
-        )
-    
-    # 2. Hostname requerido
-    hostname = parsed.hostname
-    if not hostname:
-        raise HTTPException(status_code=400, detail="URL inválida: no tiene hostname.")
-    
-    # 3. Bloquear hostnames locales conocidos
-    blocked_hosts = {"localhost", "localhost.localdomain", "0.0.0.0", "[::]"}
-    if hostname.lower() in blocked_hosts:
-        raise HTTPException(
-            status_code=400,
-            detail="No se permite analizar URLs locales (localhost)."
-        )
-    
-    # 4. Resolver hostname y verificar que no apunte a IP privada/local
+    from ssrf_guard import SsrfBlocked, assert_public_http_url
     try:
-        resolved_ips = socket.getaddrinfo(hostname, None)
-        for family, _, _, _, sockaddr in resolved_ips:
-            ip_str = sockaddr[0]
-            ip_obj = ipaddress.ip_address(ip_str)
-            for network in _BLOCKED_IP_NETWORKS:
-                if ip_obj in network:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"URL bloqueada: '{hostname}' resuelve a IP privada/local ({ip_str})."
-                    )
-    except socket.gaierror:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No se pudo resolver el hostname: '{hostname}'."
-        )
-    
-    return url.strip()
+        return assert_public_http_url(url)
+    except SsrfBlocked as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 class WebsiteAnalyzeRequest(BaseModel):
@@ -2081,7 +2048,8 @@ def _scrape_website_fallback(url: str) -> str:
     try:
         from bs4 import BeautifulSoup
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        resp = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
+        from ssrf_guard import HTML_CONTENT_TYPES, safe_fetch
+        resp = safe_fetch(url, headers=headers, allowed_types=HTML_CONTENT_TYPES)
         resp.raise_for_status()
         resp.encoding = resp.apparent_encoding or "utf-8"
         soup = BeautifulSoup(resp.content, "html.parser", from_encoding="utf-8")
@@ -2212,7 +2180,7 @@ def _parse_adn_from_llm(llm_output: str, url: str) -> dict:
             pass
 
     # Fallback: estructura básica con el texto crudo para que el usuario pueda ver qué devolvió el LLM
-    logger.warning(f"[ADN Parser] No se pudo parsear JSON del LLM. Output: {llm_output[:200]}")
+        logger.warning("[ADN Parser] No se pudo parsear JSON del modelo. Longitud: %s", len(llm_output or ""))
     return {
         "value_proposition": "",
         "sector": "",
@@ -3017,13 +2985,19 @@ async def _generate_campaign_plan(brand_id: str, campaign_id: str,
             {"name": "Activación",     "description": "CTA directo y conversión",         "days": "9-12", "focus": "conversion"},
             {"name": "Cierre",         "description": "Urgencia y recordación",           "days": "13+",  "focus": "retention"},
         ]
+        if len(stages) > 20:
+            raise ValueError("Se superó el máximo de 20 etapas.")
         logger.info(f"[Campaña {campaign_id}] Etapas generadas: {[s['name'] for s in stages]}")
 
         # ── Paso 2: Calcular calendario de publicaciones ─────────────────────
         start_dt  = datetime.strptime(campaign_data["start_date"], "%Y-%m-%d")
         end_dt    = datetime.strptime(campaign_data["end_date"],   "%Y-%m-%d")
         total_days = (end_dt - start_dt).days + 1
+        if total_days < 1 or total_days > 366:
+            raise ValueError("Se superó el máximo de 366 días de campaña.")
         channels   = campaign_data.get("channels", ["Instagram"])
+        if not isinstance(channels, list) or len(channels) > 8:
+            raise ValueError("Se superó el máximo de 8 canales.")
         frequency  = campaign_data.get("frequency", "diaria")
 
         # Determinar frecuencia en días
@@ -3285,6 +3259,9 @@ def _extract_json_from_llm(text: str) -> Optional[dict]:
     cleaned = re.sub(r'```(?:json)?\s*', '', text)
     cleaned = re.sub(r'```\s*$', '', cleaned, flags=re.MULTILINE)
     cleaned = cleaned.strip()
+    if len(cleaned) > 200_000:
+        logger.warning("Respuesta del modelo supera 200000 caracteres y no se recorre completa.")
+        cleaned = cleaned[:200_000]
 
     # 2. Intentar parsear el texto completo directamente
     try:
@@ -3351,8 +3328,10 @@ def _parse_campaign_plan(llm_output: str, campaign_data: dict) -> dict:
     parsed = _extract_json_from_llm(llm_output)
 
     if parsed and "publications" in parsed:
-        # Asegurar que cada publicación tenga ID y campos requeridos
-        for pub in parsed["publications"]:
+        pubs = parsed["publications"]
+        if not isinstance(pubs, list) or len(pubs) > 400:
+            raise ValueError("Se superó el máximo de 400 publicaciones.")
+        for pub in pubs:
             if "id" not in pub:
                 pub["id"] = str(uuid.uuid4())
             pub.setdefault("status", "pending")
@@ -4250,21 +4229,24 @@ async def generate_publication_image(campaign_id: str, pub_id: str, req: Generat
 
         # Determinar extensión según el método
         ext = "svg" if generation_method == "placeholder_svg" else "png"
+        from path_safety import PathRejected, confined_file
         img_filename = f"{pub_id}_{ts}.{ext}"
-        img_path = img_dir / img_filename
+        try:
+            img_path = confined_file(img_dir, img_filename, image=True)
+            fixed_name = f"{pub_id}.{ext}"
+            fixed_path = confined_file(img_dir, fixed_name, image=True)
+        except PathRejected as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         if generation_method == "placeholder_svg":
             # El SVG ya es texto, no base64
             svg_content = base64.b64decode(image_b64).decode("utf-8")
             img_path.write_text(svg_content, encoding="utf-8")
-            # Guardar también como .png (alias) para compatibilidad
-            fixed_path = img_dir / f"{pub_id}.svg"
             fixed_path.write_text(svg_content, encoding="utf-8")
             img_bytes_len = len(svg_content.encode("utf-8"))
         else:
             img_bytes = base64.b64decode(image_b64, validate=False)
             img_path.write_bytes(img_bytes)
-            fixed_path = img_dir / f"{pub_id}.png"
             fixed_path.write_bytes(img_bytes)
             img_bytes_len = len(img_bytes)
 
@@ -4328,36 +4310,24 @@ def serve_generated_image(filename: str):
     """
     # Soportar filename con query string (ej: pub_id.png?t=123)
     raw_filename = filename.split("?")[0]
-    
-    # SEGURIDAD: extraer solo el nombre base del archivo, eliminando cualquier
-    # secuencia de directorio (../, ..\\ , rutas absolutas, etc.)
-    clean_filename = Path(raw_filename).name
-    
-    # Validar que el filename no esté vacío y tenga extensión válida
-    if not clean_filename or clean_filename.startswith("."):
-        raise HTTPException(status_code=400, detail="Nombre de archivo inválido.")
-    
-    allowed_extensions = {".png", ".svg", ".jpg", ".jpeg", ".webp"}
-    if not any(clean_filename.lower().endswith(ext) for ext in allowed_extensions):
-        raise HTTPException(status_code=400, detail="Extensión de archivo no permitida.")
-    
+    from path_safety import PathRejected, confined_file
     img_dir = DATA_DIR / "exports" / "images"
-
-    # Buscar el archivo exacto primero
-    img_path = img_dir / clean_filename
-    
-    # SEGURIDAD: verificar que la ruta resuelta está dentro de img_dir
+    img_dir.mkdir(parents=True, exist_ok=True)
     try:
-        img_path.resolve().relative_to(img_dir.resolve())
-    except ValueError:
-        logger.warning(f"Intento de path traversal bloqueado: {filename}")
-        raise HTTPException(status_code=400, detail="Ruta de archivo no permitida.")
+        img_path = confined_file(img_dir, raw_filename, image=True)
+    except PathRejected as exc:
+        logger.warning("Intento de path traversal bloqueado")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    clean_filename = img_path.name
     
     if not img_path.exists():
         # Si pidieron .png pero solo existe .svg (placeholder), servir el SVG
         if clean_filename.endswith(".png"):
-            svg_path = img_dir / clean_filename.replace(".png", ".svg")
-            if svg_path.exists():
+            try:
+                svg_path = confined_file(img_dir, clean_filename[:-4] + ".svg", image=True)
+            except PathRejected:
+                svg_path = None
+            if svg_path is not None and svg_path.exists() and not svg_path.is_symlink():
                 img_path = svg_path
                 clean_filename = svg_path.name
             else:
@@ -4589,12 +4559,14 @@ async def upload_publication_image(
     img_dir = DATA_DIR / "exports" / "images"
     img_dir.mkdir(parents=True, exist_ok=True)
     ts = int(time.time())
+    from path_safety import PathRejected, confined_file
     img_filename = f"{pub_id}_{ts}.{ext}"
-    img_path = img_dir / img_filename
+    try:
+        img_path = confined_file(img_dir, img_filename, image=True)
+        fixed_path = confined_file(img_dir, f"{pub_id}.{ext}", image=True)
+    except PathRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     img_path.write_bytes(content)
-
-    # Guardar también como nombre fijo
-    fixed_path = img_dir / f"{pub_id}.{ext}"
     fixed_path.write_bytes(content)
 
     # Actualizar publicación
@@ -5606,8 +5578,12 @@ async def import_all_data(file: UploadFile = File(...)):
                 dir_name = camp_export.get("dir_name")
                 if not dir_name:
                     continue
-
-                camp_dir = campaigns_root / dir_name
+                from path_safety import PathRejected, confined_file
+                try:
+                    camp_dir = confined_file(campaigns_root, dir_name)
+                except PathRejected:
+                    imported_stats["skipped_existing"] += 1
+                    continue
                 if camp_dir.exists():
                     # La campaña ya existe, no sobreescribir
                     imported_stats["skipped_existing"] += 1
@@ -5615,33 +5591,54 @@ async def import_all_data(file: UploadFile = File(...)):
 
                 camp_dir.mkdir(parents=True, exist_ok=True)
 
-                # Archivos JSON de la campaña (campaign.json, etc.)
-                for filename, file_data in camp_export.get("files", {}).items():
-                    if file_data:
-                        save_json(camp_dir / filename, file_data)
+                from path_safety import PathRejected, confined_file, safe_child_name
+                for filename, file_data in list(camp_export.get("files", {}).items())[:50]:
+                    if not file_data:
+                        continue
+                    try:
+                        safe_child_name(filename)
+                        if not filename.endswith(".json"):
+                            continue
+                        save_json(confined_file(camp_dir, filename), file_data)
+                    except PathRejected:
+                        continue
 
-                # Publicaciones
-                if camp_export.get("publications"):
+                publications = camp_export.get("publications") or []
+                if len(publications) > 400:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Se superó el máximo de 400 publicaciones.",
+                    )
+                if publications:
                     pubs_dir = camp_dir / "publications"
                     pubs_dir.mkdir(parents=True, exist_ok=True)
 
-                    for pub_export in camp_export["publications"]:
+                    for pub_export in publications:
                         pub_dir_name = pub_export.get("dir_name")
                         if not pub_dir_name:
                             continue
-                        pub_dir = pubs_dir / pub_dir_name
+                        try:
+                            pub_dir = confined_file(pubs_dir, pub_dir_name)
+                        except PathRejected:
+                            continue
                         pub_dir.mkdir(parents=True, exist_ok=True)
 
-                        # Archivos JSON de la publicación
-                        for p_filename, p_data in pub_export.get("files", {}).items():
-                            if p_data:
-                                save_json(pub_dir / p_filename, p_data)
+                        for p_filename, p_data in list(pub_export.get("files", {}).items())[:50]:
+                            if not p_data:
+                                continue
+                            try:
+                                if not str(p_filename).endswith(".json"):
+                                    continue
+                                save_json(confined_file(pub_dir, p_filename), p_data)
+                            except PathRejected:
+                                continue
 
-                        # Imágenes (base64 -> archivos)
-                        if pub_export.get("images"):
-                            for img_name, img_b64 in pub_export["images"].items():
+                        for img_name, img_b64 in list(pub_export.get("images", {}).items())[:20]:
+                            try:
                                 img_bytes = base64.b64decode(img_b64)
-                                (pub_dir / img_name).write_bytes(img_bytes)
+                                confined_file(pub_dir, img_name, image=True).write_bytes(img_bytes)
+                            except (PathRejected, ValueError):
+                                continue
 
                 imported_stats["campaigns"] += 1
 

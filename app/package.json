@@ -1,0 +1,8 @@
+{
+  "name": "smartredes-frontend",
+  "private": true,
+  "description": "Interfaz de SmartRedes. DOMPurify se copia a lib/purify.min.js.",
+  "dependencies": {
+    "dompurify": "3.4.17"
+  }
+}

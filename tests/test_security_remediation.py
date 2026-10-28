@@ -132,7 +132,7 @@ class TestSVGRejection:
         with patch.dict(os.environ, {"CCS_DATA_DIR": tempfile.mkdtemp()}):
             from app import app
             from fastapi.testclient import TestClient
-            return TestClient(app)
+            return TestClient(app, base_url="http://127.0.0.1")
 
     def test_svg_upload_rejected(self, client):
         """SVG debe ser rechazado con error 400."""
@@ -180,7 +180,7 @@ class TestUploadSizeLimit:
         with patch.dict(os.environ, {"CCS_DATA_DIR": tempfile.mkdtemp()}):
             from app import app
             from fastapi.testclient import TestClient
-            return TestClient(app)
+            return TestClient(app, base_url="http://127.0.0.1")
 
     def test_oversized_image_rejected(self, client):
         """Imagen mayor a 10MB debe ser rechazada."""
@@ -346,7 +346,7 @@ class TestImportSizeLimit:
         with patch.dict(os.environ, {"CCS_DATA_DIR": tmp}):
             from app import app
             from fastapi.testclient import TestClient
-            return TestClient(app)
+            return TestClient(app, base_url="http://127.0.0.1")
 
     def test_oversized_import_rejected(self, client):
         """Archivo de importación mayor a 100MB debe ser rechazado."""
@@ -383,7 +383,7 @@ class TestHealthCheck:
         with patch.dict(os.environ, {"CCS_DATA_DIR": tmp}):
             from app import app
             from fastapi.testclient import TestClient
-            return TestClient(app)
+            return TestClient(app, base_url="http://127.0.0.1")
 
     def test_health_returns_version(self, client):
         """Health check debe incluir versión."""
@@ -474,7 +474,7 @@ class TestURLValidation:
         with patch.dict(os.environ, {"CCS_DATA_DIR": tmp}):
             from app import app
             from fastapi.testclient import TestClient
-            return TestClient(app)
+            return TestClient(app, base_url="http://127.0.0.1")
 
     def test_localhost_url_blocked(self):
         """URL apuntando a localhost debe ser rechazada."""

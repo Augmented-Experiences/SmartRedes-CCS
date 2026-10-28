@@ -46,7 +46,7 @@ def app_client(data_dir):
         app_module.DATA_DIR = data_dir
 
         from fastapi.testclient import TestClient
-        client = TestClient(app_module.app)
+        client = TestClient(app_module.app, base_url="http://127.0.0.1")
         yield client, app_module, data_dir
 
 

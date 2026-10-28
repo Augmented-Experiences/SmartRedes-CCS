@@ -3,6 +3,9 @@ name: macOS DMG
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   dmg:
     name: DMG (${{ matrix.label }})

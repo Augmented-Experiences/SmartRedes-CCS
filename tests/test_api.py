@@ -49,7 +49,7 @@ def test_client():
         mock_get.return_value = mock_tags_resp
 
         from app import app
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://127.0.0.1")
         yield client
 
 

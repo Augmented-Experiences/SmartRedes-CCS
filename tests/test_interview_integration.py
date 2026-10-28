@@ -133,7 +133,7 @@ def client(test_data_dir):
          patch("app._ollama_api_endpoint", "chat"):
         from fastapi.testclient import TestClient
         from app import app
-        yield TestClient(app)
+        yield TestClient(app, base_url="http://127.0.0.1")
 
 
 class TestInterviewEndpoint:
