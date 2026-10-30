@@ -130,31 +130,9 @@ A1111_URL: str = os.environ.get("A1111_URL", "http://localhost:7860")
 COMFYUI_URL: str = os.environ.get("COMFYUI_URL", "http://localhost:8188")
 IMAGE_TIMEOUT: int = int(os.environ.get("IMAGE_TIMEOUT", 300))  # 5 min
 
-# ---------------------------------------------------------------------------
-# Motor de imagen embebido (HuggingFace Diffusers + LCM)
-# Permite generar imágenes localmente sin depender de Ollama, A1111 ni ComfyUI.
-# El motor se carga en background al primer uso o al iniciar el servidor.
-# ---------------------------------------------------------------------------
-try:
-    from image_engine import (
-        generate_image as _engine_generate,
-        load_engine_async as _engine_load_async,
-        get_engine_status as _engine_get_status,
-        is_engine_ready as _engine_is_ready,
-        unload_engine as _engine_unload,
-        list_available_models as _engine_list_models,
-        DEFAULT_DIFFUSION_MODEL,
-    )
-    IMAGE_ENGINE_AVAILABLE = True
-    logger_tmp = logging.getLogger("css-brand-assistant")
-    logger_tmp.info("Motor de imagen embebido (Diffusers) disponible")
-except ImportError as _ie:
-    IMAGE_ENGINE_AVAILABLE = False
-    DEFAULT_DIFFUSION_MODEL = "SimianLuo/LCM_Dreamshaper_v7"
-    logging.getLogger("css-brand-assistant").warning(
-        f"Motor de imagen embebido no disponible: {_ie}. "
-        "Instala: pip install torch diffusers transformers accelerate safetensors"
-    )
+# Motor de imagen embebido (HuggingFace Diffusers) no forma parte del release.
+IMAGE_ENGINE_AVAILABLE = False
+DEFAULT_DIFFUSION_MODEL = ""
 
 # ---------------------------------------------------------------------------
 # Estado global de descargas de modelos en progreso

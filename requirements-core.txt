@@ -1,9 +1,7 @@
 # ============================================================
 # CCS Brand Assistant — Dependencias CORE (servidor web)
 # ============================================================
-# Solo las dependencias esenciales para que el servidor arranque.
-# Las dependencias opcionales (playwright, diffusers, torch)
-# se instalan por separado en install.js (Gepeto).
+# Solo lo que arranca el servidor del instalador.
 # ============================================================
 
 fastapi>=0.110.0
@@ -14,4 +12,3 @@ requests>=2.31.0
 httpx>=0.27.0
 beautifulsoup4>=4.12.0
 pydantic>=2.5.0
-Pillow>=10.0.0

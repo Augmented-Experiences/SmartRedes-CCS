@@ -3,24 +3,15 @@
 ## Cursor Cloud specific instructions
 
 CCS Brand Assistant is a single-product repo: a local FastAPI backend (`server/app.py`)
-that also serves a vanilla-JS SPA frontend (`app/index.html`). It is packaged as a
-Pinokio plugin (`pinokio.js`, `install.js`, `start.js`), but Pinokio is NOT needed
-to develop or run it here. There is no database — all state is JSON under `data/`
-(gitignored). There is no Node/`package.json`.
+that also serves a vanilla-JS SPA frontend (`app/index.html`). The shipped product
+is the desktop installer under `desktop/`. Pinokio/Gepeto launchers are not part
+of the release. There is no database — all state is JSON under `data/`
+(gitignored). Desktop deps are Node under `desktop/`; the UI pins DOMPurify in `app/package.json`.
 
 ### Environment
-- Python deps live in a local venv at `venv/` (created by the update script via
-  `scripts/setup_venv.sh`). Use `venv/bin/python` / `venv/bin/pip` directly.
-- System package `python3.12-venv` is required to create the venv; it is installed once
-  during environment setup (not part of the update script).
-- Optional heavy deps (torch CPU, diffusers/transformers, playwright + chromium) are
-  installed by `scripts/setup_venv.sh` and are failure-tolerant — the app degrades
-  gracefully without them.
-
-### Pinokio / Gepeto launcher
-- Pinokio scripts are **Gepeto v5.0** format with **one-click autostart** (`default: true` in `pinokio.js`).
-- `install.js` chains to `start.js` via `script.start` at the end of install.
-- `launch.js` is an explicit one-click entry (install if needed, else start).
+- Python deps for the installer are `requirements-desktop.txt`. Use `venv/bin/python`.
+- Do not add torch, diffusers, transformers, accelerate, playwright, or Pillow:
+  they are not in the release and SCA resolves unpinned ranges to versions we do not ship.
 
 ### Running the app (dev) `PORT=7860 venv/bin/python server/app.py` (binds `127.0.0.1:7860` only).
 - UI: `http://127.0.0.1:7860/ui/index.html` (root `/` 307-redirects there).
@@ -30,7 +21,7 @@ to develop or run it here. There is no database — all state is JSON under `dat
 ### Data directory (gotcha)
 - `data/` is gitignored, so a truly fresh checkout has no data dirs. The app creates
   most subdirs on demand, but agent/prompt defaults come from `defaults/`. If `data/`
-  is missing, re-create it with the same steps `install.js` uses:
+  is missing, re-create the data dirs the app expects:
   ```
   venv/bin/python -c "import os;[os.makedirs(d,exist_ok=True) for d in ['data/agents','data/prompts/system','data/prompts/skills','data/sessions','data/exports','data/brands','data/campaigns','data/audit','data/images']]"
   venv/bin/python -c "import os,shutil;dst='data/agents/agents.json';shutil.copy2('defaults/agents.json',dst) if not os.path.exists(dst) else None"

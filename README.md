@@ -1,10 +1,10 @@
 # CCS Brand Assistant
 
-**Plugin de Pinokio para gestión de ADN de marca y campañas digitales con IA local para PYMEs**
+**Aplicación de escritorio para gestión de ADN de marca y campañas digitales con IA local para PYMEs**
 
 > Desarrollado para la **Cámara de Comercio de Santiago (CCS)**
 
-CCS Brand Assistant es un plugin para [Pinokio](https://pinokio.computer) que permite a las pequeñas y medianas empresas construir una identidad de marca estructurada —denominada **ADN empresarial**— y utilizarla como base para planificar y generar campañas de marketing digital multicanal, todo con inteligencia artificial ejecutándose localmente en la computadora del usuario, sin dependencia de servicios en la nube.
+CCS Brand Assistant es la aplicación de escritorio SmartRedes. Permite a las pequeñas y medianas empresas construir una identidad de marca estructurada —denominada **ADN empresarial**— y utilizarla como base para planificar y generar campañas de marketing digital multicanal, con inteligencia artificial local. El release es el instalador de `desktop/`, no un plugin de Pinokio.
 
 ---
 
@@ -20,7 +20,7 @@ CCS Brand Assistant es un plugin para [Pinokio](https://pinokio.computer) que pe
 
 **Generación de campañas con IA.** El agente estratega toma el ADN y los objetivos de negocio para construir una planificación temporal con etapas narrativas y publicaciones concretas por canal.
 
-**Generación de imágenes con IA local.** Motor embebido (HuggingFace Diffusers) compatible con Windows, macOS y Linux. Soporta LCM Dreamshaper v7, SD Turbo y SDXL Turbo.
+**Generación de imágenes.** Si no hay un proveedor local de imágenes, la app guarda un placeholder. No incluye el motor HuggingFace.
 
 ---
 
@@ -28,15 +28,7 @@ CCS Brand Assistant es un plugin para [Pinokio](https://pinokio.computer) que pe
 
 ```
 ccs-brand-assistant/
-├── pinokio.js          # Menú dinámico del plugin (Gepeto v5.0)
-├── pinokio.json        # Metadatos del plugin Pinokio
-├── install.js          # Instalación con 1 click (Ollama + venv + deps)
-├── start.js            # Inicio del servidor como daemon
-├── stop.js             # Parada del servidor
-├── reset.js            # Desinstalación (conserva datos)
-├── update.js           # Actualización (git pull + deps)
-├── torch.js            # Instalador cross-platform de PyTorch (Gepeto)
-├── link.js             # Deduplicación de librerías (Gepeto)
+├── desktop/            # Instalador Tauri (el release)
 ├── requirements.txt    # Dependencias Python
 ├── scripts/            # Scripts PowerShell para Windows
 │   ├── install_ollama.ps1   # Instala Ollama automáticamente
@@ -49,8 +41,9 @@ ccs-brand-assistant/
 │   ├── logo-ccs.svg    # Logo de la Cámara de Comercio de Santiago
 │   └── fonts/          # Fuentes DM Sans, Feeling Passionate, Brushwell
 ├── server/
-│   ├── app.py          # Backend FastAPI con todos los módulos
-│   └── image_engine.py # Motor de generación de imágenes (Diffusers)
+│   ├── app.py          # Backend FastAPI
+│   ├── web_scraper.py  # Análisis de sitios públicos
+│   └── ssrf_guard.py   # Rechazo de URLs privadas
 ├── defaults/
 │   ├── agents.json
 │   └── prompts/

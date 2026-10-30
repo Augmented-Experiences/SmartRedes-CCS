@@ -40,21 +40,9 @@ elif [ -f "$PROJECT_DIR/requirements.txt" ]; then
     "$VENV_PYTHON" -m pip install -r "$PROJECT_DIR/requirements.txt"
 fi
 
-# ── Instalar playwright ──────────────────────────────────────
-echo "Instalando playwright..."
-"$VENV_PYTHON" -m pip install playwright && "$VENV_PYTHON" -m playwright install chromium || echo "AVISO: playwright no instalado."
-
-# ── Instalar torch (CPU) ─────────────────────────────────────
-echo "Instalando torch (CPU)..."
-"$VENV_PYTHON" -m pip install torch --index-url https://download.pytorch.org/whl/cpu || echo "AVISO: torch no instalado."
-
-# ── Instalar diffusers ───────────────────────────────────────
-echo "Instalando diffusers y transformers..."
-"$VENV_PYTHON" -m pip install diffusers transformers accelerate safetensors || echo "AVISO: diffusers no instalado."
-
 # ── Verificar módulos críticos ───────────────────────────────
 echo "Verificando modulos criticos..."
-"$VENV_PYTHON" -c "import requests, fastapi, uvicorn, pydantic, PIL; print('VERIFY_OK')"
+"$VENV_PYTHON" -c "import requests, fastapi, uvicorn, pydantic; print('VERIFY_OK')"
 
 echo "DEPS_OK"
 echo "=== Entorno Python configurado correctamente ==="

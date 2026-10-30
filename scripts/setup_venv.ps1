@@ -105,37 +105,9 @@ if (Test-Path $reqCoreFile) {
     }
 }
 
-# ── Instalar playwright ──────────────────────────────────────────────────────
-Write-Host "Instalando playwright..."
-& $venvPython -m pip install playwright
-if ($LASTEXITCODE -eq 0) {
-    & $venvPython -m playwright install chromium
-    Write-Host "PLAYWRIGHT_OK" -ForegroundColor Green
-} else {
-    Write-Host "AVISO: No se pudo instalar playwright. Continuando..." -ForegroundColor Yellow
-}
-
-# ── Instalar torch (CPU) ─────────────────────────────────────────────────────
-Write-Host "Instalando torch (CPU)..."
-& $venvPython -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "TORCH_OK" -ForegroundColor Green
-} else {
-    Write-Host "AVISO: No se pudo instalar torch. Continuando..." -ForegroundColor Yellow
-}
-
-# ── Instalar diffusers ───────────────────────────────────────────────────────
-Write-Host "Instalando diffusers y transformers..."
-& $venvPython -m pip install diffusers transformers accelerate safetensors
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "DIFFUSERS_OK" -ForegroundColor Green
-} else {
-    Write-Host "AVISO: No se pudo instalar diffusers. Continuando..." -ForegroundColor Yellow
-}
-
 # ── Verificar módulos críticos ───────────────────────────────────────────────
 Write-Host "Verificando modulos criticos..."
-& $venvPython -c "import requests, fastapi, uvicorn, pydantic, PIL; print('VERIFY_OK')"
+& $venvPython -c "import requests, fastapi, uvicorn, pydantic; print('VERIFY_OK')"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Verificacion de modulos fallo." -ForegroundColor Red
     exit 1

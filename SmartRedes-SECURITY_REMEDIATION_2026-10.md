@@ -14,7 +14,7 @@ La aplicación sigue siendo de escritorio, un usuario, backend en loopback. Anal
 
 Búsqueda ejecutada de `5.19.0` y `accelerate==1.15` en el árbol: sin coincidencias. `pip freeze` del venv con el que se arma el sidecar no lista `transformers` ni `accelerate`. El instalador instala `requirements-desktop.txt`, que tampoco los incluye. `desktop/smartsuite.config.json` los excluye del empaquetado.
 
-El código que sí puede cargar un modelo de imagen (`server/image_engine.py`) ahora solo acepta los tres identificadores del catálogo (`SimianLuo/LCM_Dreamshaper_v7`, `stabilityai/sd-turbo`, `stabilityai/sdxl-turbo`) y llama a `from_pretrained` con `trust_remote_code=False`. Una ruta, una URL o un archivo aportado por el usuario no llega a esa carga. Esos tres identificadores siguen descargándose a la caché local del motor opcional; ese motor no va en el instalador.
+El motor opcional de imágenes HuggingFace se retiró de la rama de release. No forma parte del instalador.
 
 ### DOMPurify: `IN_PLACE` y `setConfig`
 
@@ -30,9 +30,8 @@ Búsqueda en `app/index.html` y en `server/` de `IN_PLACE` y `setConfig(`: ningu
 | `server/ssrf_guard.py` | Guardia nueva: solo http/https, resolución de todas las IP, rechazo de privadas, loopback, link-local, reservadas y metadata, máximo 5 redirecciones, 12 segundos y 2 MB. |
 | `server/web_scraper.py` | El análisis de sitios públicos usa esa guardia en cada pedido y en cada redirección, incluida Jina y Playwright. |
 | `server/path_safety.py` | Basename de imagen y confinamiento de la ruta resuelta. Rechaza `..`, absolutas, separadores y un symlink que sale de la carpeta. |
-| `server/app.py` | Sirve y guarda imágenes solo dentro de `exports/images`. Importación confinada. Tope de 366 días y 8 canales. Log del modelo sin el texto completo. Host solo loopback. CORS incluye `[::1]`. |
+| `server/app.py` | Sirve y guarda imágenes solo dentro de `exports/images`. Importación confinada. Tope de 366 días y 8 canales. Log del modelo sin el texto completo. Host solo loopback. CORS incluye `[::1]`. El motor Diffusers no se importa. |
 | `server/log_safety.py` | Filtro central que quita CR y LF de todo mensaje de log. |
-| `server/image_engine.py` | Catálogo cerrado y `trust_remote_code=False`. |
 | `requirements.txt` | Comentario de que el lock fija 5.6.2 y 1.13.0 y de que el instalador no los lleva. No cambia versiones. |
 | `tests/test_ssrf_path_2026.py` | Pruebas nuevas de SSRF, path traversal y del filtro de log. |
 | `tests/test_security_remediation.py`, `tests/test_api.py`, `tests/test_fixes_v2.py`, `tests/test_fixes_v3.py`, `tests/test_interview_integration.py` | El cliente de prueba usa `Host: 127.0.0.1`, que es el único host que el backend acepta. |
@@ -82,7 +81,7 @@ La interfaz se abrió en `http://127.0.0.1:8766/index.html`. El dashboard pintó
 
 ## 5. Entorno del instalador
 
-`desktop/scripts/build-backend.ps1` instala `requirements-desktop.txt` (FastAPI, uvicorn, requests, httpx, beautifulsoup4, pydantic, Pillow y dependencias directas). No instala torch, diffusers, transformers, accelerate ni playwright.
+`desktop/scripts/build-backend.ps1` instala `requirements-desktop.txt` (FastAPI, uvicorn, requests, httpx, beautifulsoup4, pydantic y dependencias directas). No instala Pillow, torch, diffusers, transformers, accelerate ni playwright.
 
 `pip freeze` del venv local usado para compilar el sidecar, el 27 oct 2026:
 
