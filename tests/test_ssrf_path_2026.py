@@ -132,3 +132,69 @@ class TestLogSanitizer:
         assert LogSanitizerFilter().filter(record) is True
         assert "\n" not in record.msg
         assert "\r" not in record.msg
+
+
+class TestLoopBounds:
+    """CWE-606: el id no entra en un glob y el recorrido de disco tiene tope."""
+
+    def _write_campaign(self, root: Path, brand_id: str, camp_id: str):
+        folder = root / "campaigns" / f"{brand_id}_{camp_id}"
+        folder.mkdir(parents=True)
+        (folder / "campaign.json").write_text(
+            '{"brand_id": "%s", "id": "%s", "created_at": "2026-01-01"}' % (brand_id, camp_id),
+            encoding="utf-8",
+        )
+
+    def test_brand_id_glob_does_not_list_other_brands(self, tmp_path, monkeypatch):
+        import app
+        from fastapi import HTTPException
+        monkeypatch.setattr(app, "DATA_DIR", tmp_path)
+        self._write_campaign(tmp_path, "brand1", "campA")
+        self._write_campaign(tmp_path, "brand2", "campB")
+        listed = app.list_campaigns("brand1")
+        assert [c["id"] for c in listed["campaigns"]] == ["campA"]
+        for bad in ("*", "brand*", "..", "a/b", "brand1/../brand2", ""):
+            with pytest.raises(HTTPException) as exc:
+                app.list_campaigns(bad)
+            assert exc.value.status_code == 400
+
+    def test_stats_and_images_stop_at_the_cap(self, tmp_path, monkeypatch):
+        import app
+        monkeypatch.setattr(app, "DATA_DIR", tmp_path)
+        monkeypatch.setattr(app, "_MAX_DIR_ENTRIES", 2)
+        for i in range(4):
+            self._write_campaign(tmp_path, "brand1", f"camp{i}")
+        stats = app.get_stats()
+        assert stats["campaigns"] == 2
+
+        img_dir = tmp_path / "exports" / "images"
+        img_dir.mkdir(parents=True)
+        for i in range(4):
+            (img_dir / f"foto{i}.png").write_bytes(b"\x89PNG")
+        listed = app.list_generated_images()
+        assert listed["count"] == 2
+
+    def test_comfy_prompt_id_is_not_placed_in_the_url(self, monkeypatch):
+        import app
+        history_urls = []
+
+        def get(url, **kwargs):
+            if str(url).endswith("/system_stats"):
+                ok = MagicMock()
+                ok.status_code = 200
+                return ok
+            history_urls.append(str(url))
+            missing = MagicMock()
+            missing.status_code = 404
+            return missing
+
+        def post(url, **kwargs):
+            queued = MagicMock()
+            queued.raise_for_status = MagicMock()
+            queued.json = MagicMock(return_value={"prompt_id": "../../admin"})
+            return queued
+
+        monkeypatch.setattr(app.requests, "get", get)
+        monkeypatch.setattr(app.requests, "post", post)
+        assert app._try_comfyui("un prompt", {"comfyui_url": "http://127.0.0.1:8188", "timeout": 1}) is None
+        assert history_urls == []

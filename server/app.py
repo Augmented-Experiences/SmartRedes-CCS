@@ -11,6 +11,7 @@ Arquitectura:
 """
 
 import os
+import re
 import sys
 import json
 import uuid
@@ -715,6 +716,32 @@ def load_json(path: Path, default=None) -> Any:
             logger.error(f"Error leyendo JSON {path}: {e}")
             return default if default is not None else {}
     return default if default is not None else {}
+
+
+# CWE-606: un request no recorre más entradas de las que caben en este tope.
+_MAX_DIR_ENTRIES = 500
+
+
+def _bounded_entries(folder: Path):
+    """Itera como máximo _MAX_DIR_ENTRIES nombres y no sigue symlinks."""
+    if not folder.is_dir():
+        return
+    seen = 0
+    for entry in folder.iterdir():
+        if seen >= _MAX_DIR_ENTRIES:
+            logger.warning("Tope de %s entradas al leer %s", _MAX_DIR_ENTRIES, folder.name)
+            break
+        seen += 1
+        if entry.is_symlink():
+            continue
+        yield entry
+
+
+def _entry_mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
 
 
 def _find_campaign_dir(campaign_id: str) -> Optional[Path]:
@@ -2790,12 +2817,28 @@ REGLAS:
 # ---------------------------------------------------------------------------
 @app.get("/api/brands/{brand_id}/campaigns")
 def list_campaigns(brand_id: str):
-    """Lista todas las campañas de una marca."""
+    """Lista las campañas de una marca.
+
+    El id se valida y se compara como prefijo. No se interpola en un glob,
+    así que `*`, `?` o `..` no amplían el recorrido.
+    """
+    from path_safety import PathRejected, safe_child_name
+    try:
+        brand_id = safe_child_name(brand_id)
+    except PathRejected as exc:
+        raise HTTPException(status_code=400, detail="Identificador de marca inválido") from exc
     campaigns_dir = DATA_DIR / "campaigns"
     campaigns = []
-    for camp_file in campaigns_dir.glob(f"{brand_id}_*/campaign.json"):
-        camp = load_json(camp_file)
-        if camp:
+    prefix = f"{brand_id}_"
+    for camp_dir in _bounded_entries(campaigns_dir):
+        if not camp_dir.is_dir() or not camp_dir.name.startswith(prefix):
+            continue
+        try:
+            safe_child_name(camp_dir.name[len(prefix):])
+        except PathRejected:
+            continue
+        camp = load_json(camp_dir / "campaign.json")
+        if camp and camp.get("brand_id") == brand_id:
             campaigns.append(camp)
     campaigns.sort(key=lambda c: c.get("created_at", ""), reverse=True)
     return {"campaigns": campaigns}
@@ -3892,8 +3935,8 @@ def _try_comfyui(prompt: str, cfg: dict) -> Optional[str]:
     )
     queue_resp.raise_for_status()
     prompt_id = queue_resp.json().get("prompt_id")
-    if not prompt_id:
-        logger.warning("ComfyUI: no se obtuvo prompt_id")
+    if not isinstance(prompt_id, str) or not re.fullmatch(r"[A-Za-z0-9-]{8,80}", prompt_id):
+        logger.warning("ComfyUI: prompt_id inválido")
         return None
 
     # Esperar a que termine (polling)
@@ -3908,12 +3951,22 @@ def _try_comfyui(prompt: str, cfg: dict) -> Optional[str]:
                     images_list = node_out.get("images", [])
                     if images_list:
                         img_info = images_list[0]
-                        # Descargar la imagen generada
+                        filename = str(img_info.get("filename") or "")
+                        subfolder = str(img_info.get("subfolder") or "")
+                        img_type = str(img_info.get("type") or "output")
+                        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", filename):
+                            continue
+                        if subfolder and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,80}", subfolder):
+                            continue
+                        if img_type not in {"output", "input", "temp"}:
+                            img_type = "output"
                         img_resp = requests.get(
                             f"{base_url}/view",
-                            params={"filename": img_info["filename"],
-                                    "subfolder": img_info.get("subfolder", ""),
-                                    "type": img_info.get("type", "output")},
+                            params={
+                                "filename": filename,
+                                "subfolder": subfolder,
+                                "type": img_type,
+                            },
                             timeout=30,
                         )
                         img_resp.raise_for_status()
@@ -4333,15 +4386,23 @@ def list_generated_images():
     img_dir = DATA_DIR / "exports" / "images"
     if not img_dir.exists():
         return {"images": []}
-    images = [
-        {
+    pngs = [
+        f for f in _bounded_entries(img_dir)
+        if f.is_file() and f.suffix.lower() == ".png"
+    ]
+    pngs.sort(key=_entry_mtime, reverse=True)
+    images = []
+    for f in pngs:
+        try:
+            st = f.stat()
+        except OSError:
+            continue
+        images.append({
             "filename": f.name,
             "url": f"/api/images/{f.name}",
-            "size_kb": round(f.stat().st_size / 1024, 1),
-            "created_at": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
-        }
-        for f in sorted(img_dir.glob("*.png"), key=lambda x: x.stat().st_mtime, reverse=True)
-    ]
+            "size_kb": round(st.st_size / 1024, 1),
+            "created_at": datetime.fromtimestamp(st.st_mtime).isoformat(),
+        })
     return {"images": images, "count": len(images)}
 
 
@@ -4671,9 +4732,9 @@ def get_stats(brand_id: Optional[str] = None):
 
     campaigns_root = DATA_DIR / "campaigns"
     if campaigns_root.exists():
-        for camp_dir in sorted(campaigns_root.iterdir(), key=lambda d: d.stat().st_mtime, reverse=True):
-            if not camp_dir.is_dir():
-                continue
+        camp_dirs = [d for d in _bounded_entries(campaigns_root) if d.is_dir()]
+        camp_dirs.sort(key=_entry_mtime, reverse=True)
+        for camp_dir in camp_dirs:
             camp_file = camp_dir / "campaign.json"
             plan_file = camp_dir / "plan.json"
             if not camp_file.exists():
