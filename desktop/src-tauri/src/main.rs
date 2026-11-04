@@ -1,10 +1,10 @@
 // App de escritorio nativa SmartSuite (Tauri v2)
 //
 // Arranca el backend FastAPI empaquetado (sidecar `backend`), prepara
-// Ollama (API HTTP local: sistema en 11434, binario portable, o descarga zip/tgz)
-// y muestra el progreso en la pantalla de carga. Cuando todo está listo, la
-// ventana carga la UI real sin reiniciar. Al cerrar, detiene el sidecar y
-// únicamente el Ollama que esta app haya arrancado.
+// Ollama (API HTTP local: sistema en 11434, binario portable compartido, o
+// descarga zip/tgz) y muestra el progreso en la pantalla de carga. Cuando
+// todo está listo, la ventana carga la UI real sin reiniciar. Al cerrar,
+// detiene el sidecar. El `ollama serve` compartido sigue en marcha.
 #![cfg_attr(all(not(debug_assertions), target_os = "windows"), windows_subsystem = "windows")]
 
 use smartsuite_ollama as ollama_portable;
@@ -529,15 +529,16 @@ fn start_owned_ollama(
         s.percent = -1;
     });
     ollama_log(&format!(
-        "Iniciando '{}' serve en 127.0.0.1:{port} (portable={portable})",
-        binary.display()
+        "Iniciando '{}' serve en 127.0.0.1:{port} (portable={portable}) OLLAMA_MODELS={}",
+        binary.display(),
+        ollama_portable::shared_models_dir().display()
     ));
     let mut cmd = ollama_portable::ollama_command(binary);
     if portable {
         ollama_portable::configure_portable_serve(&mut cmd, binary, user_data, port);
     } else {
         cmd.arg("serve");
-        cmd.env("OLLAMA_HOST", format!("127.0.0.1:{port}"));
+        ollama_portable::apply_serve_env(&mut cmd, port);
     }
     cmd.stdout(Stdio::null()).stderr(Stdio::null());
     #[cfg(unix)]
@@ -566,10 +567,11 @@ fn start_owned_ollama(
 fn ensure_portable_binary(
     app: &tauri::AppHandle,
     agent: &ureq::Agent,
-    user_data: &Path,
+    _user_data: &Path,
 ) -> Result<PathBuf, String> {
-    let home = ollama_portable::ollama_home(user_data);
-    if let Some(existing) = ollama_portable::find_portable_binary(&home) {
+    let home = ollama_portable::engine_home();
+    let legacy = ollama_portable::legacy_engine_homes();
+    if let Some(existing) = ollama_portable::adopt_legacy_engine(&home, &legacy) {
         ollama_portable::ensure_executable(&existing);
         ollama_log(&format!(
             "Binario portable reutilizado: {}",
@@ -674,6 +676,8 @@ fn bootstrap_ollama(app: tauri::AppHandle, backend_port: u16) {
         let port = ollama_portable::DEFAULT_PORT;
         let mut ready = false;
 
+        ollama_portable::import_shared_models(&data_dir);
+
         if ollama_portable::api_healthy(&agent, port) {
             if let Some(pid) = ollama_portable::read_owned_pid(&data_dir) {
                 if ollama_portable::pid_looks_like_ollama(pid) {
@@ -700,9 +704,14 @@ fn bootstrap_ollama(app: tauri::AppHandle, backend_port: u16) {
         }
 
         if !ready {
-            let home = ollama_portable::ollama_home(&data_dir);
-            if let Some(portable) = ollama_portable::find_portable_binary(&home) {
+            let engine = ollama_portable::engine_home();
+            let legacy = ollama_portable::legacy_engine_homes();
+            if let Some(portable) = ollama_portable::adopt_legacy_engine(&engine, &legacy) {
                 ollama_portable::ensure_executable(&portable);
+                ollama_log(&format!(
+                    "Binario portable reutilizado: {}",
+                    portable.display()
+                ));
                 ready = start_owned_ollama(&app, &portable, &data_dir, true, port);
             }
         }
@@ -828,12 +837,12 @@ fn ignore_stale_early_close(app: &tauri::AppHandle) -> bool {
     started.elapsed() < Duration::from_secs(2)
 }
 
-/// Detiene el sidecar (árbol PyInstaller/uvicorn) y únicamente el Ollama propio.
+/// Detiene el sidecar (árbol PyInstaller/uvicorn). El Ollama compartido sigue activo.
 fn shutdown_services(app: &tauri::AppHandle) {
     if app.state::<ShutdownState>().0.swap(true, Ordering::AcqRel) {
         return;
     }
-    ollama_log("shutdown_services: cerrando sidecar y Ollama propio");
+    ollama_log("shutdown_services: cerrando sidecar; Ollama compartido sigue en ejecución");
     let backend_port = app.try_state::<BackendPort>().map(|port| port.0);
     if let Some(child) = app.state::<BackendState>().0.lock().unwrap().take() {
         let pid = child.pid();
@@ -847,23 +856,13 @@ fn shutdown_services(app: &tauri::AppHandle) {
     } else if let Some(port) = backend_port {
         kill_listeners_on_port(port);
     }
-    if let Some(owned) = app.state::<OllamaState>().0.lock().unwrap().take() {
-        let pid = owned.pid();
-        ollama_log(&format!("Deteniendo Ollama propio (PID {pid})."));
-        match owned {
-            OwnedOllama::Child(mut child) => {
-                ollama_portable::kill_owned_pid(pid);
-                let _ = child.kill();
-                let _ = child.wait();
-            }
-            OwnedOllama::Pid(pid) => {
-                if ollama_portable::pid_looks_like_ollama(pid) {
-                    ollama_portable::kill_owned_pid(pid);
-                }
-            }
-        }
-        wait_pid_gone(pid);
-        ollama_portable::clear_owned_pid(&user_data_dir());
+    let ollama_state = app.state::<OllamaState>();
+    let owned_guard = ollama_state.0.lock().unwrap();
+    if let Some(owned) = owned_guard.as_ref() {
+        ollama_log(&format!(
+            "Ollama compartido sigue en ejecución (PID {}).",
+            owned.pid()
+        ));
     }
     ollama_log("shutdown_services: listo");
 }

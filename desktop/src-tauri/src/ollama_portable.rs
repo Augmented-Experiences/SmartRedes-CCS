@@ -1,12 +1,17 @@
 //! Portable Ollama bootstrap (no MSI / system installer).
 //!
-//! Official zip/tgz from ollama.com is downloaded into the product data dir,
-//! extracted, and served locally. Only a process this app started is owned.
+//! The engine and model store are shared by SmartGastos, SmartRedes, and
+//! SmartCaja under `SmartSuite/ollama`. Per-app markers stay in the product
+//! data dir. Official zip/tgz from ollama.com is downloaded only into the
+//! shared engine home.
 
-use std::fs;
+use std::fs::{self, File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::Duration;
+use std::time::{Duration, Instant};
+
+#[cfg(windows)]
+use std::os::windows::fs::OpenOptionsExt;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -110,16 +115,86 @@ pub fn archive_spec() -> ArchiveSpec {
         .expect("al menos un archivo oficial de Ollama")
 }
 
+const SUITE_DIR_NAME: &str = "SmartSuite";
+const LEGACY_APP_NAMES: &[&str] = &["SmartGastos", "SmartRedes", "SmartCaja"];
+
+/// Per-app Ollama state (`active_model.txt`, `active_profile.json`).
 pub fn ollama_home(user_data: &Path) -> PathBuf {
     user_data.join("ollama")
 }
 
-pub fn models_dir(user_data: &Path) -> PathBuf {
-    ollama_home(user_data).join("models")
+fn home_dir() -> PathBuf {
+    #[cfg(windows)]
+    {
+        std::env::var("USERPROFILE")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("."))
+    }
+    #[cfg(not(windows))]
+    {
+        std::env::var("HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("."))
+    }
 }
 
-pub fn owned_pid_path(user_data: &Path) -> PathBuf {
-    ollama_home(user_data).join("owned.pid")
+/// Same base directory rules as the app data dir, without the product folder.
+pub fn platform_data_base() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var("APPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| home_dir().join("AppData").join("Roaming"))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        home_dir()
+            .join("Library")
+            .join("Application Support")
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::env::var("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| home_dir().join(".local").join("share"))
+    }
+}
+
+pub fn shared_engine_home_under(data_base: &Path) -> PathBuf {
+    data_base.join(SUITE_DIR_NAME).join("ollama")
+}
+
+pub fn legacy_engine_homes_under(data_base: &Path) -> Vec<PathBuf> {
+    LEGACY_APP_NAMES
+        .iter()
+        .map(|name| data_base.join(name).join("ollama"))
+        .collect()
+}
+
+/// `%APPDATA%\SmartSuite\ollama` (or the platform equivalent).
+pub fn engine_home() -> PathBuf {
+    shared_engine_home_under(&platform_data_base())
+}
+
+pub fn legacy_engine_homes() -> Vec<PathBuf> {
+    legacy_engine_homes_under(&platform_data_base())
+}
+
+pub fn shared_models_dir() -> PathBuf {
+    engine_home().join("models")
+}
+
+/// Shared model directory. `user_data` is unused; app markers stay in `ollama_home`.
+pub fn models_dir(_user_data: &Path) -> PathBuf {
+    shared_models_dir()
+}
+
+fn pid_file_in(engine: &Path) -> PathBuf {
+    engine.join("owned.pid")
+}
+
+pub fn owned_pid_path(_user_data: &Path) -> PathBuf {
+    pid_file_in(&engine_home())
 }
 
 pub fn http_agent() -> ureq::Agent {
@@ -185,6 +260,7 @@ pub fn find_portable_binary(home: &Path) -> Option<PathBuf> {
     let candidates = [
         home.join("bin").join(exe),
         home.join(exe),
+        home.join("runtime").join(exe),
         home.join("ollama").join("bin").join(exe),
         home.join("ollama").join(exe),
     ];
@@ -209,7 +285,11 @@ fn walk_for_binary(dir: &Path, exe: &str, depth: u8) -> Option<PathBuf> {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_file() {
-            if path.file_name().and_then(|n| n.to_str()) == Some(exe) {
+            let fname = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if fname == "active_model.txt" || fname == "active_profile.json" {
+                continue;
+            }
+            if fname == exe {
                 return Some(path);
             }
         } else if path.is_dir() {
@@ -426,21 +506,33 @@ pub fn ensure_executable(path: &Path) {
     let _ = path;
 }
 
-pub fn write_owned_pid(user_data: &Path, pid: u32) {
-    let path = owned_pid_path(user_data);
+fn write_pid_at(engine: &Path, pid: u32) {
+    let path = pid_file_in(engine);
     if let Some(parent) = path.parent() {
         let _ = fs::create_dir_all(parent);
     }
     let _ = fs::write(path, format!("{pid}\n"));
 }
 
-pub fn read_owned_pid(user_data: &Path) -> Option<u32> {
-    let text = fs::read_to_string(owned_pid_path(user_data)).ok()?;
+fn read_pid_at(engine: &Path) -> Option<u32> {
+    let text = fs::read_to_string(pid_file_in(engine)).ok()?;
     text.trim().parse().ok()
 }
 
-pub fn clear_owned_pid(user_data: &Path) {
-    let _ = fs::remove_file(owned_pid_path(user_data));
+fn clear_pid_at(engine: &Path) {
+    let _ = fs::remove_file(pid_file_in(engine));
+}
+
+pub fn write_owned_pid(_user_data: &Path, pid: u32) {
+    write_pid_at(&engine_home(), pid);
+}
+
+pub fn read_owned_pid(_user_data: &Path) -> Option<u32> {
+    read_pid_at(&engine_home())
+}
+
+pub fn clear_owned_pid(_user_data: &Path) {
+    clear_pid_at(&engine_home());
 }
 
 pub fn pid_looks_like_ollama(pid: u32) -> bool {
@@ -548,6 +640,344 @@ pub fn kill_owned_pid(pid: u32) {
     }
 }
 
+fn path_key(path: &Path) -> String {
+    let canon = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let mut text = canon.to_string_lossy().to_string();
+    if let Some(rest) = text.strip_prefix(r"\\?\") {
+        text = rest.to_string();
+    }
+    #[cfg(windows)]
+    {
+        text.replace('/', "\\").to_ascii_lowercase()
+    }
+    #[cfg(not(windows))]
+    {
+        text
+    }
+}
+
+/// True when this exact binary path is the image of a running process.
+pub fn binary_image_running(binary: &Path) -> bool {
+    let want = path_key(binary);
+    running_ollama_images().iter().any(|running| path_key(running) == want)
+}
+
+fn running_ollama_images() -> Vec<PathBuf> {
+    #[cfg(windows)]
+    {
+        let mut cmd = Command::new("powershell");
+        cmd.args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-CimInstance Win32_Process -Filter \"Name='ollama.exe'\" | Select-Object -ExpandProperty ExecutablePath",
+        ]);
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        let output = match cmd.output() {
+            Ok(output) if output.status.success() => output,
+            _ => return Vec::new(),
+        };
+        return String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(PathBuf::from)
+            .collect();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let mut found = Vec::new();
+        let Ok(entries) = fs::read_dir("/proc") else {
+            return found;
+        };
+        for entry in entries.flatten() {
+            let exe = entry.path().join("exe");
+            if let Ok(target) = fs::read_link(&exe) {
+                if target.file_name().and_then(|n| n.to_str()) == Some("ollama") {
+                    found.push(target);
+                }
+            }
+        }
+        found
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let output = Command::new("ps")
+            .args(["-axww", "-o", "command="])
+            .output();
+        let Ok(output) = output else {
+            return Vec::new();
+        };
+        String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter_map(|line| {
+                let token = line.split_whitespace().next()?;
+                let path = Path::new(token);
+                if path.file_name().and_then(|n| n.to_str()) == Some("ollama") {
+                    Some(path.to_path_buf())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+    {
+        Vec::new()
+    }
+}
+
+fn engine_file_stays(rel: &Path) -> bool {
+    for component in rel.components() {
+        if let std::path::Component::Normal(name) = component {
+            if name == "models" || name == "logs" {
+                return true;
+            }
+        }
+    }
+    matches!(
+        rel.file_name().and_then(|n| n.to_str()),
+        Some("active_model.txt")
+            | Some("active_profile.json")
+            | Some("owned.pid")
+            | Some("migrate.lock")
+            | Some("desktop_status.json")
+            | Some("config.json")
+    )
+}
+
+fn move_engine_tree(from: &Path, to: &Path) {
+    move_engine_dir(from, from, to);
+}
+
+fn move_engine_dir(root: &Path, dir: &Path, dest_root: &Path) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(rel) = path.strip_prefix(root) else {
+            continue;
+        };
+        if engine_file_stays(rel) {
+            continue;
+        }
+        if path.is_dir() {
+            move_engine_dir(root, &path, dest_root);
+            let _ = fs::remove_dir(&path);
+        } else if path.is_file() {
+            let target = dest_root.join(rel);
+            if target.exists() {
+                continue;
+            }
+            if let Some(parent) = target.parent() {
+                if fs::create_dir_all(parent).is_err() {
+                    continue;
+                }
+            }
+            if fs::rename(&path, &target).is_err() {
+                // Locked or busy: leave the source for a later launch.
+            }
+        }
+    }
+}
+
+/// Use a portable binary from the shared home, or adopt the first legacy home
+/// that has one. A running legacy binary stays in place.
+pub fn adopt_legacy_engine(engine: &Path, legacy_homes: &[PathBuf]) -> Option<PathBuf> {
+    adopt_legacy_engine_with(engine, legacy_homes, binary_image_running)
+}
+
+fn adopt_legacy_engine_with(
+    engine: &Path,
+    legacy_homes: &[PathBuf],
+    mut is_running: impl FnMut(&Path) -> bool,
+) -> Option<PathBuf> {
+    if let Some(binary) = find_portable_binary(engine) {
+        return Some(binary);
+    }
+    for home in legacy_homes {
+        let Some(binary) = find_portable_binary(home) else {
+            continue;
+        };
+        if is_running(&binary) {
+            return Some(binary);
+        }
+        move_engine_tree(home, engine);
+        if let Some(moved) = find_portable_binary(engine) {
+            return Some(moved);
+        }
+        return Some(binary);
+    }
+    None
+}
+
+/// Zip download is unnecessary when the shared home or any legacy home already
+/// has a portable binary.
+pub fn engine_download_needed(engine: &Path, legacy_homes: &[PathBuf]) -> bool {
+    if find_portable_binary(engine).is_some() {
+        return false;
+    }
+    !legacy_homes.iter().any(|home| find_portable_binary(home).is_some())
+}
+
+fn dirs_match(left: &Path, right: &Path) -> bool {
+    path_key(left) == path_key(right)
+}
+
+fn model_sources(engine: &Path, legacy_homes: &[PathBuf], app_data: &Path) -> Vec<PathBuf> {
+    let dest = engine.join("models");
+    let mut sources: Vec<PathBuf> = Vec::new();
+    for home in legacy_homes {
+        let models = home.join("models");
+        if models.is_dir() && !dirs_match(&models, &dest) && !sources.iter().any(|p| dirs_match(p, &models))
+        {
+            sources.push(models);
+        }
+    }
+    let app_models = ollama_home(app_data).join("models");
+    if app_models.is_dir()
+        && !dirs_match(&app_models, &dest)
+        && !sources.iter().any(|p| dirs_match(p, &app_models))
+    {
+        sources.push(app_models);
+    }
+    sources
+}
+
+fn file_len(path: &Path) -> Option<u64> {
+    fs::metadata(path).ok().map(|meta| meta.len())
+}
+
+fn reconcile_model_file(src: &Path, dest: &Path) {
+    let Some(src_len) = file_len(src) else {
+        return;
+    };
+    if dest.exists() {
+        if file_len(dest) == Some(src_len) {
+            let _ = fs::remove_file(src);
+        }
+        return;
+    }
+    if let Some(parent) = dest.parent() {
+        if fs::create_dir_all(parent).is_err() {
+            return;
+        }
+    }
+    if fs::rename(src, dest).is_err() {
+        // Source is locked. Leave it and keep going.
+    }
+}
+
+fn import_tree(src_dir: &Path, dest_dir: &Path) {
+    let Ok(entries) = fs::read_dir(src_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let target = dest_dir.join(entry.file_name());
+        if path.is_dir() {
+            import_tree(&path, &target);
+            let _ = fs::remove_dir(&path);
+        } else if path.is_file() {
+            reconcile_model_file(&path, &target);
+        }
+    }
+}
+
+fn import_blobs_and_manifests(source_models: &Path, dest_models: &Path) {
+    for name in ["blobs", "manifests"] {
+        let src = source_models.join(name);
+        if src.is_dir() {
+            import_tree(&src, &dest_models.join(name));
+        }
+    }
+}
+
+#[cfg(unix)]
+extern "C" {
+    fn flock(fd: i32, operation: i32) -> i32;
+}
+
+fn try_lock_file(path: &Path) -> Option<File> {
+    if let Some(parent) = path.parent() {
+        if fs::create_dir_all(parent).is_err() {
+            return None;
+        }
+    }
+    #[cfg(windows)]
+    {
+        return OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .share_mode(0)
+            .open(path)
+            .ok();
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::io::AsRawFd;
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(path)
+            .ok()?;
+        // LOCK_EX | LOCK_NB
+        let rc = unsafe { flock(file.as_raw_fd(), 2 | 4) };
+        if rc == 0 {
+            Some(file)
+        } else {
+            None
+        }
+    }
+}
+
+fn wait_for_migrate_lock(path: &Path, wait: Duration) -> Option<File> {
+    let start = Instant::now();
+    loop {
+        if let Some(file) = try_lock_file(path) {
+            return Some(file);
+        }
+        if start.elapsed() >= wait {
+            return None;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
+/// Move legacy `blobs` and `manifests` into the shared models dir.
+/// If another app holds `migrate.lock`, wait up to `wait` and then return
+/// without failing.
+pub fn import_models_into(
+    engine: &Path,
+    legacy_homes: &[PathBuf],
+    app_data: &Path,
+    wait: Duration,
+) {
+    let sources = model_sources(engine, legacy_homes, app_data);
+    if sources.is_empty() {
+        return;
+    }
+    let Some(_lock) = wait_for_migrate_lock(&engine.join("migrate.lock"), wait) else {
+        return;
+    };
+    let dest = engine.join("models");
+    for source in sources {
+        import_blobs_and_manifests(&source, &dest);
+    }
+}
+
+pub fn import_shared_models(app_data: &Path) {
+    import_models_into(
+        &engine_home(),
+        &legacy_engine_homes(),
+        app_data,
+        Duration::from_secs(60),
+    );
+}
+
 pub fn ollama_command(binary: &Path) -> Command {
     #[allow(unused_mut)]
     let mut cmd = Command::new(binary);
@@ -556,12 +986,18 @@ pub fn ollama_command(binary: &Path) -> Command {
     cmd
 }
 
-/// Apply env so a portable serve stores models under the product data dir.
-pub fn configure_portable_serve(cmd: &mut Command, binary: &Path, user_data: &Path, port: u16) {
-    cmd.arg("serve");
+/// Env for every `ollama serve` this app starts, including one found on PATH.
+pub fn apply_serve_env(cmd: &mut Command, port: u16) {
+    let models = shared_models_dir();
+    let _ = fs::create_dir_all(&models);
     cmd.env("OLLAMA_HOST", format!("127.0.0.1:{port}"));
-    cmd.env("OLLAMA_MODELS", models_dir(user_data));
-    let _ = fs::create_dir_all(models_dir(user_data));
+    cmd.env("OLLAMA_MODELS", &models);
+}
+
+/// Apply env so a portable serve stores models in the shared SmartSuite dir.
+pub fn configure_portable_serve(cmd: &mut Command, binary: &Path, _user_data: &Path, port: u16) {
+    cmd.arg("serve");
+    apply_serve_env(cmd, port);
     if let Some(bin_dir) = binary.parent() {
         let path_var = if cfg!(windows) { "PATH" } else { "PATH" };
         let sep = if cfg!(windows) { ";" } else { ":" };
@@ -710,17 +1146,210 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
     }
 
-    #[test]
-    fn owned_pid_roundtrip() {
+    fn exe_name() -> &'static str {
+        if cfg!(windows) { "ollama.exe" } else { "ollama" }
+    }
+
+    fn scratch(name: &str) -> PathBuf {
         let root = std::env::temp_dir().join(format!(
-            "smartredes-ollama-pid-{}",
+            "smartredes-ollama-{name}-{}",
             std::process::id()
         ));
         let _ = fs::remove_dir_all(&root);
-        write_owned_pid(&root, 4242);
-        assert_eq!(read_owned_pid(&root), Some(4242));
-        clear_owned_pid(&root);
-        assert_eq!(read_owned_pid(&root), None);
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    #[test]
+    fn engine_home_is_smartsuite_and_active_model_stays_in_app() {
+        let base = scratch("paths");
+        let engine = shared_engine_home_under(&base);
+        assert_eq!(engine, base.join("SmartSuite").join("ollama"));
+        assert_eq!(
+            engine.join("models"),
+            base.join("SmartSuite").join("ollama").join("models")
+        );
+        let app = base.join("SmartRedes");
+        let marker = ollama_home(&app).join("active_model.txt");
+        assert_eq!(
+            marker,
+            base.join("SmartRedes").join("ollama").join("active_model.txt")
+        );
+        assert_eq!(
+            pid_file_in(&engine),
+            base.join("SmartSuite").join("ollama").join("owned.pid")
+        );
+        let homes = legacy_engine_homes_under(&base);
+        assert_eq!(homes[0], base.join("SmartGastos").join("ollama"));
+        assert_eq!(homes[1], base.join("SmartRedes").join("ollama"));
+        assert_eq!(homes[2], base.join("SmartCaja").join("ollama"));
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn owned_pid_roundtrip_under_engine_home() {
+        let base = scratch("pid");
+        let engine = shared_engine_home_under(&base);
+        write_pid_at(&engine, 4242);
+        assert_eq!(read_pid_at(&engine), Some(4242));
+        assert!(pid_file_in(&engine).is_file());
+        assert!(!base.join("SmartRedes").join("ollama").join("owned.pid").exists());
+        clear_pid_at(&engine);
+        assert_eq!(read_pid_at(&engine), None);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn active_model_txt_is_not_a_binary() {
+        let root = scratch("marker");
+        fs::write(root.join("active_model.txt"), b"llama3.2:3b\n").unwrap();
+        fs::create_dir_all(root.join("models")).unwrap();
+        fs::write(root.join("models").join(exe_name()), b"ignore").unwrap();
+        assert!(find_portable_binary(&root).is_none());
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn legacy_binary_suppresses_engine_download() {
+        let base = scratch("legacy-bin");
+        let engine = shared_engine_home_under(&base);
+        let legacy = legacy_engine_homes_under(&base);
+        let redes = &legacy[1];
+        fs::create_dir_all(redes.join("runtime")).unwrap();
+        fs::write(redes.join("runtime").join(exe_name()), b"portable").unwrap();
+        fs::write(redes.join("active_model.txt"), b"llama3.2:3b\n").unwrap();
+        assert!(!engine_download_needed(&engine, &legacy));
+        assert!(find_portable_binary(&engine).is_none());
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn adopt_moves_stopped_legacy_engine_and_keeps_app_state() {
+        let base = scratch("adopt");
+        let engine = shared_engine_home_under(&base);
+        let legacy = legacy_engine_homes_under(&base);
+        let redes = &legacy[1];
+        fs::create_dir_all(redes.join("runtime")).unwrap();
+        fs::write(redes.join("runtime").join(exe_name()), b"portable").unwrap();
+        fs::create_dir_all(redes.join("models").join("blobs")).unwrap();
+        fs::write(redes.join("models").join("blobs").join("sha"), b"blob").unwrap();
+        fs::write(redes.join("active_model.txt"), b"llama3.2:3b\n").unwrap();
+        fs::write(redes.join("active_profile.json"), b"{}\n").unwrap();
+        fs::create_dir_all(redes.join("logs")).unwrap();
+        fs::write(redes.join("logs").join("ollama.log"), b"log").unwrap();
+
+        let found = adopt_legacy_engine_with(&engine, &legacy, |_| false).expect("binary");
+        assert_eq!(found, engine.join("runtime").join(exe_name()));
+        assert!(redes.join("active_model.txt").is_file());
+        assert!(redes.join("active_profile.json").is_file());
+        assert!(redes.join("logs").join("ollama.log").is_file());
+        assert!(redes.join("models").join("blobs").join("sha").is_file());
+        assert!(!engine.join("models").exists());
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn running_legacy_binary_stays_in_place() {
+        let base = scratch("running");
+        let engine = shared_engine_home_under(&base);
+        let legacy = legacy_engine_homes_under(&base);
+        let redes = &legacy[1];
+        fs::create_dir_all(redes.join("bin")).unwrap();
+        let binary = redes.join("bin").join(exe_name());
+        fs::write(&binary, b"portable").unwrap();
+        let found = adopt_legacy_engine_with(&engine, &legacy, |_| true).expect("binary");
+        assert_eq!(found, binary);
+        assert!(!engine.join("bin").join(exe_name()).exists());
+        assert!(!engine_download_needed(&engine, &legacy));
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn import_moves_blobs_and_reconciles_size() {
+        let base = scratch("models");
+        let engine = shared_engine_home_under(&base);
+        let legacy = legacy_engine_homes_under(&base);
+        let redes = legacy[1].join("models");
+        fs::create_dir_all(redes.join("blobs")).unwrap();
+        fs::create_dir_all(redes.join("manifests").join("library")).unwrap();
+        fs::write(redes.join("blobs").join("new"), b"aaaa").unwrap();
+        fs::write(redes.join("blobs").join("same"), b"bbbb").unwrap();
+        fs::write(redes.join("blobs").join("diff"), b"cccc").unwrap();
+        fs::write(redes.join("manifests").join("library").join("llama"), b"manifest").unwrap();
+        fs::create_dir_all(engine.join("models").join("blobs")).unwrap();
+        fs::write(engine.join("models").join("blobs").join("same"), b"bbbb").unwrap();
+        fs::write(engine.join("models").join("blobs").join("diff"), b"zz").unwrap();
+
+        import_models_into(&engine, &legacy, &base.join("SmartRedes"), Duration::from_secs(5));
+
+        assert_eq!(
+            fs::read(engine.join("models").join("blobs").join("new")).unwrap(),
+            b"aaaa"
+        );
+        assert!(!redes.join("blobs").join("new").exists());
+        assert!(!redes.join("blobs").join("same").exists());
+        assert_eq!(
+            fs::read(engine.join("models").join("blobs").join("diff")).unwrap(),
+            b"zz"
+        );
+        assert_eq!(fs::read(redes.join("blobs").join("diff")).unwrap(), b"cccc");
+        assert_eq!(
+            fs::read(engine.join("models").join("manifests").join("library").join("llama")).unwrap(),
+            b"manifest"
+        );
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn migrate_lock_waits_then_continues() {
+        let base = scratch("lock");
+        let engine = shared_engine_home_under(&base);
+        let legacy = legacy_engine_homes_under(&base);
+        let blobs = legacy[0].join("models").join("blobs");
+        fs::create_dir_all(&blobs).unwrap();
+        fs::write(blobs.join("sha"), b"data").unwrap();
+        let lock_path = engine.join("migrate.lock");
+        let held = try_lock_file(&lock_path).expect("lock");
+        import_models_into(&engine, &legacy, &base.join("SmartGastos"), Duration::ZERO);
+        assert!(blobs.join("sha").is_file());
+        assert!(!engine.join("models").join("blobs").join("sha").exists());
+        drop(held);
+        import_models_into(&engine, &legacy, &base.join("SmartGastos"), Duration::from_secs(2));
+        assert_eq!(
+            fs::read(engine.join("models").join("blobs").join("sha")).unwrap(),
+            b"data"
+        );
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn locked_model_file_is_left_in_place() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let base = scratch("locked-blob");
+        let engine = shared_engine_home_under(&base);
+        let legacy = legacy_engine_homes_under(&base);
+        let blobs = legacy[2].join("models").join("blobs");
+        fs::create_dir_all(&blobs).unwrap();
+        let src = blobs.join("sha");
+        fs::write(&src, b"locked-blob").unwrap();
+        let held = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&src)
+            .expect("hold blob");
+        import_models_into(&engine, &legacy, &base.join("SmartCaja"), Duration::from_secs(2));
+        assert!(src.is_file(), "locked source stays");
+        assert!(!engine.join("models").join("blobs").join("sha").exists());
+        drop(held);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn existing_tag_suppresses_pull() {
+        let body = r#"{"models":[{"name":"llama3.1:8b","model":"llama3.1:8b"}]}"#;
+        assert!(tags_have_model(body, "llama3.1:8b"));
+        assert!(!tags_have_model(body, "llama3.2:3b"));
+        assert!(!tags_have_model(body, "moondream"));
     }
 }
